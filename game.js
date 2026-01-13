@@ -14,7 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const amountBtns = document.querySelectorAll('.amount-btn');
 
     let players = [];
-    let myBalance = parseFloat(localStorage.getItem('test_balance')) || 100.00;
+
+    const params = new URLSearchParams(window.location.search);
+    const bParam = params.get('balance');
+    let myBalance = 100.00;
+
+    if (bParam !== null) {
+        myBalance = parseFloat(bParam);
+        localStorage.setItem('test_balance', myBalance.toFixed(2));
+    } else {
+        myBalance = parseFloat(localStorage.getItem('test_balance')) || 100.00;
+    }
+
     let roundTime = 30;
     let isSpinning = false;
     let timerStarted = false;
