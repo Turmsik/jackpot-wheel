@@ -4,24 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>THE HEIST: JACKPOT 🎰</title>
+    <title>JACKPOT GOLD 🏆</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        /* Small version tag for debugging */
-        #ver-tag {
-            position: fixed;
-            top: 2px;
-            right: 5px;
-            font-size: 8px;
-            color: #4b5563;
-            z-index: 1000;
-        }
-    </style>
 </head>
 
 <body>
-    <div id="ver-tag">SYSTEM v5.0</div>
     <div id="game-container">
         <!-- Wheel Section -->
         <div class="wheel-section">
@@ -37,21 +25,15 @@
             </div>
         </div>
 
-        <!-- Betting Controls -->
         <div class="betting-panel">
             <div class="bet-header">ВАША СТАВКА (USDT)</div>
-
             <div class="bet-input-container">
                 <input type="number" id="custom-bet-input" placeholder="0.00" min="0.1" step="0.1">
-                <button id="place-custom-bet" class="bet-btn-main">ИГРАТЬ 🔥</button>
+                <button id="place-custom-bet" class="bet-btn-main">В ИГРУ! 🔥</button>
             </div>
 
-            <!-- Fee Transparency -->
             <div class="fee-info">
-                Комиссия 5% <span class="fee-tag">ТОЛЬКО С ВЫИГРЫША</span>
-                <div style="font-size: 9px; margin-top: 4px; color: #6b7280; opacity: 0.8;">
-                    Своя ставка возвращается без комиссии.
-                </div>
+                Налог 5% <span class="fee-tag">ТОЛЬКО С ВЫИГРЫША</span>
             </div>
 
             <div class="bet-actions-quick">
@@ -61,18 +43,12 @@
                 <button class="quick-btn" id="clear-input">C</button>
             </div>
 
-            <div class="user-balance-box">
-                ВАШ БАЛАНС: <span id="user-balance">0.00</span> USDT
-            </div>
+            <div class="user-balance-box">БАЛАНС: <span id="user-balance">0.00</span></div>
         </div>
 
-        <!-- Players List (Feed) -->
         <div class="list-header">УЧАСТНИКИ</div>
-        <div class="players-list" id="players-list">
-            <div class="empty-state">Ожидание первой ставки...</div>
-        </div>
+        <div class="players-list" id="players-list"></div>
     </div>
-
     <script src="game.js"></script>
 </body>
 
