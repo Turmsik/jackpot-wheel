@@ -17,50 +17,43 @@
                 <canvas id="wheel-canvas" width="300" height="300"></canvas>
                 <div class="wheel-pointer">▼</div>
                 <div class="wheel-center">
-                    <div class="timer" id="timer">00:45</div>
-                    <div class="pot-total">💰 <span id="pot-amount">125.50</span></div>
+                    <div class="timer" id="timer">--:--</div>
+                    <div class="pot-total">💰 <span id="pot-amount">0.00</span></div>
                 </div>
             </div>
         </div>
 
         <!-- Betting Controls -->
         <div class="betting-panel">
-            <div class="bet-header">БАНК РАУНДА</div>
-            <div class="bet-actions">
-                <button class="bet-btn" data-amount="0.5">0.5 USDT</button>
-                <button class="bet-btn" data-amount="1">1 USDT</button>
-                <button class="bet-btn" data-amount="5">5 USDT</button>
-                <button class="bet-btn max" data-amount="max">MAX</button>
+            <div class="bet-header">СТАВКА В USDT</div>
+
+            <div class="bet-input-container">
+                <input type="number" id="custom-bet-input" placeholder="0.00" min="0.1" step="0.1">
+                <button id="place-custom-bet" class="bet-btn-main">СТАВИТЬ</button>
+            </div>
+
+            <!-- Fee Transparency -->
+            <div class="fee-info">
+                В банк пойдет: <span id="net-bet-display">0.00</span> USDT
+                <span class="fee-tag">(Комиссия 5%)</span>
+            </div>
+
+            <div class="bet-actions-quick">
+                <button class="quick-btn" data-amount="1">+1</button>
+                <button class="quick-btn" data-amount="5">+5</button>
+                <button class="quick-btn" data-amount="10">+10</button>
+                <button class="quick-btn" id="clear-input">C</button>
+            </div>
+
+            <div class="user-balance-box">
+                ВАШ БАЛАНС: <span id="user-balance">0.00</span> USDT
             </div>
         </div>
 
         <!-- Players List (Feed) -->
+        <div class="list-header">УЧАСТНИКИ</div>
         <div class="players-list" id="players-list">
-            <!-- Dynamic Content -->
-            <div class="player-row">
-                <div class="player-color" style="background: #ef4444;"></div>
-                <div class="player-info">
-                    <div class="player-name">@crypto_king</div>
-                    <div class="player-bet">50.00 USDT</div>
-                </div>
-                <div class="player-percent">40%</div>
-            </div>
-            <div class="player-row">
-                <div class="player-color" style="background: #3b82f6;"></div>
-                <div class="player-info">
-                    <div class="player-name">@lucky_guy</div>
-                    <div class="player-bet">25.50 USDT</div>
-                </div>
-                <div class="player-percent">20%</div>
-            </div>
-            <div class="player-row">
-                <div class="player-color" style="background: #10b981;"></div>
-                <div class="player-info">
-                    <div class="player-name">@you</div>
-                    <div class="player-bet">10.00 USDT</div>
-                </div>
-                <div class="player-percent">8%</div>
-            </div>
+            <div class="empty-state">Ожидание первой ставки...</div>
         </div>
     </div>
 
