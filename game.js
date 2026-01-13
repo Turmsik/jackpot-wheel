@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const betBtn = document.getElementById('place-custom-bet');
     const userBalanceDisplay = document.getElementById('user-balance');
     const depositBtn = document.getElementById('fake-deposit');
+    const modal = document.getElementById('deposit-modal');
+    const closeModal = document.getElementById('close-modal');
+    const amountBtns = document.querySelectorAll('.amount-btn');
 
     let players = [];
     let myBalance = parseFloat(localStorage.getItem('test_balance')) || 100.00;
@@ -31,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBalanceUI();
         updateGameState();
         window.Telegram.WebApp.expand();
-        console.log("SYSTEM START: JACKPOT GOLD");
     }
 
     function updateBalanceUI() {
@@ -63,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderList(total);
         } else {
             drawEmptyWheel();
-            playersList.innerHTML = '<div style="text-align:center;padding:10px;color:#4b5563">Waiting...</div>';
+            playersList.innerHTML = '<div style="text-align:center;padding:10px;color:#4b5563">Waiting for bets...</div>';
         }
     }
 
@@ -111,18 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    depositBtn.addEventListener('click', () => {
-        const amount = prompt("СУММА ПОПОЛНЕНИЯ (TEST):", "100");
-        if (amount && !isNaN(parseFloat(amount))) {
-            const val = parseFloat(amount);
-            window.Telegram.WebApp.showConfirm(`ФЕЙК-ОПЛАТА: Вы пополняете на ${val.toFixed(2)} USDT. Тестовый режим.`, (ok) => {
+    // --- DEPOSIT MODAL LOGIC ---
+    depositBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
+    closeModal.addEventListener('click', () => { modal.style.display = 'none'; });
+
+    amountBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = parseFloat(btn.dataset.val);
+            window.Telegram.WebApp.showConfirm(`ФЕЙК-ОПЛАТА: Вы пополняете на ${val}$ для теста.`, (ok) => {
                 if (ok) {
                     myBalance += val;
                     updateBalanceUI();
                     window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    modal.style.display = 'none';
                 }
             });
-        }
+        });
     });
 
     function startRound() {
@@ -133,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         botInterval = setInterval(() => {
             if (!isSpinning) {
                 const bot = botPool[Math.floor(Math.random() * botPool.length)];
-                handleNewBet(Math.floor(Math.random() * 10) + 1, bot.name, bot.color);
+                handleNewBet(Math.floor(Math.random() * 15) + 5, bot.name, bot.color);
             }
         }, 3000);
     }
@@ -154,9 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const winCenter = (wStart + wEnd) / 2;
-        const targetRotation = (360 * 10) + (360 - winCenter); // 10 rounds spin!
+        const targetRotation = (360 * 10) + (360 - winCenter);
 
-        // ULTRA FAIL-SAFE ANIMATION TRIGGER
         wheelWrapper.style.transition = "none";
         wheelWrapper.style.transform = "rotate(-90deg)";
 
