@@ -16,11 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Game State
     let players = [];
-    let myBalance = 100.00; // Mock balance
+    let myBalance = 100.00;
     let roundTime = 120;
     let isSpinning = false;
     let timerStarted = false;
     let timerInterval = null;
+
+    // --- BOTS CONFIGURATION ---
+    const botNames = [
+        '@crypto_king', '@ton_master', '@lucky_guy', '@whale_🐋',
+        '@degen_1337', '@usdt_miner', '@jackpot_hunter', '@moon_boi',
+        '@diamond_hands', '@hustler_tg'
+    ];
+    const botColors = [
+        '#6366f1', '#a855f7', '#ec4899', '#f43f5e',
+        '#ef4444', '#f97316', '#eab308', '#22c55e',
+        '#06b6d4', '#3b82f6'
+    ];
 
     // --- INITIALIZATION ---
     function init() {
@@ -116,15 +128,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- BOT SYSTEM ---
+    function spawnBotBet() {
+        if (isSpinning || !timerStarted) return;
+
+        // Randomly skip a beat for natural feel
+        if (Math.random() > 0.4) return;
+
+        const botIdx = Math.floor(Math.random() * botNames.length);
+        const name = botNames[botIdx];
+        const color = botColors[botIdx];
+        const amount = (Math.random() * 10 + 0.5); // Random bet 0.5 - 10.5
+
+        const pIdx = players.findIndex(p => p.name === name);
+        if (pIdx >= 0) {
+            players[pIdx].bet += amount;
+        } else {
+            players.push({ name, bet: amount, color });
+        }
+
+        updateGameState();
+    }
+
     // --- INTERACTION ---
     betBtn.addEventListener('click', () => {
         const val = parseFloat(betInput.value);
         if (isNaN(val) || val < 0.1) {
-            window.Telegram.WebApp.showAlert("Min ставка 0.1 USDT");
+            window.Telegram.WebApp.showAlert("Min 0.1 USDT");
             return;
         }
         if (val > myBalance) {
-            window.Telegram.WebApp.showAlert("Недостаточно баланса!");
+            window.Telegram.WebApp.showAlert("Мало денег!");
             return;
         }
 
@@ -149,21 +183,18 @@ document.addEventListener('DOMContentLoaded', () => {
         myBalance -= amount;
         updateBalanceUI();
 
-        // 100% of bet goes to pot now!
         const myIndex = players.findIndex(p => p.name === '@you');
         if (myIndex >= 0) {
             players[myIndex].bet += amount;
         } else {
-            players.push({
-                name: '@you',
-                bet: amount,
-                color: '#10b981'
-            });
+            players.push({ name: '@you', bet: amount, color: '#10b981' });
         }
 
         if (!timerStarted) {
             startTimer();
             timerStarted = true;
+            // Bot simulation starts
+            setInterval(spawnBotBet, 3000);
         }
 
         updateGameState();
@@ -214,8 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
         wheelElement.style.transform = `rotate(${targetRot}deg)`;
 
         setTimeout(() => {
-            // CALCULATE FAIR PRIZE
-            // Winner gets: Their Bet + (Remaining Pot * 95%)
             const othersMoney = total - winner.bet;
             const houseFee = othersMoney * 0.05;
             const netWin = othersMoney - houseFee;
@@ -223,12 +252,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             timerDisplay.textContent = "WINNER!";
             timerDisplay.style.color = "#10b981";
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
 
             if (winner.name === '@you') {
                 myBalance += finalPayout;
                 updateBalanceUI();
-                window.Telegram.WebApp.showAlert(`Вы выиграли ${finalPayout.toFixed(2)} USDT! (Налог: ${houseFee.toFixed(2)})`);
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                window.Telegram.WebApp.showAlert(`ВЫ ВЫИГРАЛИ! 🎉 +${finalPayout.toFixed(2)} USDT`);
+            } else {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                window.Telegram.WebApp.showAlert(`Выиграл ${winner.name}. Повезет в следующий раз!`);
             }
 
             setTimeout(resetGame, 5000);
