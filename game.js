@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const depositBtn = document.getElementById('fake-deposit');
 
     let players = [];
-    let myBalance = 100.00;
+    let myBalance = parseFloat(localStorage.getItem('test_balance')) || 100.00;
     let roundTime = 30;
     let isSpinning = false;
     let timerStarted = false;
@@ -34,7 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("SYSTEM START: JACKPOT GOLD");
     }
 
-    function updateBalanceUI() { userBalanceDisplay.textContent = myBalance.toFixed(2); }
+    function updateBalanceUI() {
+        userBalanceDisplay.textContent = myBalance.toFixed(2);
+        localStorage.setItem('test_balance', myBalance.toFixed(2));
+    }
 
     function resizeCanvas() {
         const dpr = window.devicePixelRatio || 1;
