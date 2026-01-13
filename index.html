@@ -4,15 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JACKPOT TEST V3 🚀</title>
+    <title>NUCLEAR TEST V4 ☢️</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        .nuclear-header {
+            background: #facc15;
+            color: #000;
+            font-weight: 900;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        #debug-log {
+            background: #000;
+            color: #22c55e;
+            font-family: monospace;
+            font-size: 10px;
+            height: 60px;
+            overflow-y: auto;
+            padding: 5px;
+            border-top: 1px solid #333;
+        }
+
+        .force-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-weight: 900;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="debug-overlay">SYSTEM V3.1: BOTS ACTIVE (AUTO-START)</div>
+    <div class="nuclear-header">VERSION 4: NUCLEAR BOT TEST ☢️</div>
+
     <div id="game-container">
-        <!-- Wheel Section -->
         <div class="wheel-section">
             <div class="wheel-container">
                 <canvas id="wheel-canvas" width="300" height="300"></canvas>
@@ -24,40 +55,19 @@
             </div>
         </div>
 
-        <!-- Betting Controls -->
         <div class="betting-panel">
-            <div class="bet-header">ВАША СТАВКА (USDT)</div>
-
+            <button id="force-bots" class="force-btn">ВЫЗВАТЬ БОТОВ (MANUAL) 🤖</button>
+            <div class="bet-header" style="margin-top:10px">ВАША СТАВКА (USDT)</div>
             <div class="bet-input-container">
                 <input type="number" id="custom-bet-input" placeholder="0.00" min="0.1" step="0.1">
-                <button id="place-custom-bet" class="bet-btn-main">В ИГРУ! 🔥</button>
+                <button id="place-custom-bet" class="bet-btn-main">СТАВКА 🔥</button>
             </div>
-
-            <!-- Fee Transparency (FAIR MODE) -->
-            <div class="fee-info">
-                Комиссия 5% <span class="fee-tag">ТОЛЬКО С ВЫИГРЫША</span>
-                <div style="font-size: 9px; margin-top: 4px; color: #6b7280; opacity: 0.8;">
-                    Своя ставка возвращается без комиссии.
-                </div>
-            </div>
-
-            <div class="bet-actions-quick">
-                <button class="quick-btn" data-amount="1">+1</button>
-                <button class="quick-btn" data-amount="5">+5</button>
-                <button class="quick-btn" data-amount="10">+10</button>
-                <button class="quick-btn" id="clear-input">C</button>
-            </div>
-
-            <div class="user-balance-box">
-                ВАШ БАЛАНС: <span id="user-balance">0.00</span> USDT
-            </div>
+            <div class="user-balance-box">БАЛАНС: <span id="user-balance">0.00</span></div>
         </div>
 
-        <!-- Players List (Feed) -->
         <div class="list-header">УЧАСТНИКИ</div>
-        <div class="players-list" id="players-list">
-            <div class="empty-state">Ожидание первой ставки...</div>
-        </div>
+        <div id="players-list" class="players-list"></div>
+        <div id="debug-log">[LOG] Ждем загрузки...</div>
     </div>
 
     <script src="game.js"></script>
