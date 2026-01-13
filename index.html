@@ -4,12 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>THE HEIST: JACKPOT WHEEL 🎰</title>
+    <title>THE HEIST: JACKPOT 🎰</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Small version tag for debugging */
+        #ver-tag {
+            position: fixed;
+            top: 2px;
+            right: 5px;
+            font-size: 8px;
+            color: #4b5563;
+            z-index: 1000;
+        }
+    </style>
 </head>
 
 <body>
+    <div id="ver-tag">SYSTEM v5.0</div>
     <div id="game-container">
         <!-- Wheel Section -->
         <div class="wheel-section">
@@ -32,11 +44,11 @@
                 <button id="place-custom-bet" class="bet-btn-main">ИГРАТЬ 🔥</button>
             </div>
 
-            <!-- Fee Transparency (FAIR MODE) -->
+            <!-- Fee Transparency -->
             <div class="fee-info">
                 Комиссия 5% <span class="fee-tag">ТОЛЬКО С ВЫИГРЫША</span>
                 <div style="font-size: 9px; margin-top: 4px; color: #6b7280; opacity: 0.8;">
-                    Своя ставка возвращается целиком.
+                    Своя ставка возвращается без комиссии.
                 </div>
             </div>
 

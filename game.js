@@ -1,9 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Canvas & Context
+    // --- UI ELEMENTS ---
     const canvas = document.getElementById('wheel-canvas');
     const ctx = canvas.getContext('2d');
-
-    // UI Elements
     const potDisplay = document.getElementById('pot-amount');
     const timerDisplay = document.getElementById('timer');
     const playersList = document.getElementById('players-list');
@@ -14,8 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear-input');
     const userBalanceDisplay = document.getElementById('user-balance');
 
-    // Game State
-    let players = [];
+    // --- GAME STATE ---
+    let players = []; // Stores objects: { name, bet, color }
     let myBalance = 100.00;
     let roundTime = 120;
     let isSpinning = false;
@@ -23,18 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerInterval = null;
     let botInterval = null;
 
-    // --- BOTS CONFIGURATION ---
+    // --- BOT POOL ---
     const botPool = [
         { name: '@crypto_king', color: '#6366f1' },
         { name: '@ton_master', color: '#a855f7' },
         { name: '@lucky_guy', color: '#ec4899' },
         { name: '@whale_🐋', color: '#f43f5e' },
-        { name: '@degen_1337', color: '#ef4444' },
-        { name: '@usdt_miner', color: '#f97316' },
-        { name: '@jackpot_hunter', color: '#eab308' },
-        { name: '@moon_boi', color: '#22c55e' },
-        { name: '@diamond_hands', color: '#06b6d4' },
-        { name: '@hustler_tg', color: '#3b82f6' }
+        { name: '@degen_1337', color: '#ef4444' }
     ];
 
     // --- INITIALIZATION ---
@@ -43,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBalanceUI();
         updateGameState();
         window.Telegram.WebApp.expand();
+        console.log("GAME V5: LOADED");
     }
 
     function updateBalanceUI() {
@@ -57,22 +51,65 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.scale(dpr, dpr);
     }
 
-    // --- CORE LOGIC ---
-    function getTotalPot() {
-        return players.reduce((sum, p) => sum + p.bet, 0);
+    // --- BETTING CORE ---
+    function handleNewBet(amount, name, color) {
+        if (isSpinning) return;
+
+        // 🛡 SUMMATION LOGIC: Strictly check if player exists
+        const pIdx = players.findIndex(p => p.name.trim() === name.trim());
+
+        if (pIdx >= 0) {
+            players[pIdx].bet += amount;
+            console.log(`Updated ${name} total bet to ${players[pIdx].bet}`);
+        } else {
+            players.push({ name: name.trim(), bet: amount, color: color });
+            console.log(`Added new player: ${name}`);
+        }
+
+        // Start round if first bet
+        if (!timerStarted) {
+            timerStarted = true;
+            startRound();
+        }
+
+        updateGameState();
     }
 
     function updateGameState() {
-        const total = getTotalPot();
+        const total = players.reduce((sum, p) => sum + p.bet, 0);
         potDisplay.textContent = total.toFixed(2);
 
         if (total > 0) {
             drawWheel(total);
-            updateFeed(total);
+            renderPlayerList(total);
         } else {
-            playersList.innerHTML = '<div class="empty-state" style="text-align:center; padding:20px; color:#4b5563; font-size:12px;">Ожидание первой ставки...</div>';
             drawEmptyWheel();
+            playersList.innerHTML = '<div class="empty-state" style="text-align:center; padding:15px; color:#4b5563; font-size:11px;">Ожидание ставок...</div>';
         }
+    }
+
+    // --- WHEEL DRAWING (MONOLITHIC SEGMENTS) ---
+    function drawWheel(total) {
+        const cx = canvas.width / (2 * window.devicePixelRatio);
+        const cy = canvas.height / (2 * window.devicePixelRatio);
+        const r = cx;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let startAngle = 0;
+        players.forEach(p => {
+            const slice = (p.bet / total) * 2 * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, startAngle, startAngle + slice);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            // Inner lines
+            ctx.strokeStyle = '#18191c';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            startAngle += slice;
+        });
     }
 
     function drawEmptyWheel() {
@@ -85,43 +122,21 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fill();
     }
 
-    function drawWheel(total) {
-        const cx = canvas.width / (2 * window.devicePixelRatio);
-        const cy = canvas.height / (2 * window.devicePixelRatio);
-        const radius = cx;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let startAngle = 0;
-
-        players.forEach(player => {
-            const sliceAngle = (player.bet / total) * 2 * Math.PI;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
-            ctx.closePath();
-            ctx.fillStyle = player.color;
-            ctx.fill();
-            ctx.strokeStyle = '#18191c';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            startAngle += sliceAngle;
-        });
-    }
-
-    function updateFeed(total) {
+    // --- PLAYER LIST RENDERING ---
+    function renderPlayerList(total) {
         playersList.innerHTML = '';
-        // Sort players by bet amount for the list
-        const sortedPlayers = [...players].sort((a, b) => b.bet - a.bet);
+        // Sort by bet for the UI list
+        const sorted = [...players].sort((a, b) => b.bet - a.bet);
 
-        sortedPlayers.forEach(player => {
-            const percent = ((player.bet / total) * 100).toFixed(1);
+        sorted.forEach(p => {
+            const percent = ((p.bet / total) * 100).toFixed(1);
             const div = document.createElement('div');
             div.className = 'player-row';
             div.innerHTML = `
-                <div class="player-color" style="background: ${player.color};"></div>
+                <div class="player-color" style="background: ${p.color};"></div>
                 <div class="player-info">
-                    <div class="player-name">${player.name}</div>
-                    <div class="player-bet">${player.bet.toFixed(2)} USDT</div>
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-bet">${p.bet.toFixed(2)} USDT</div>
                 </div>
                 <div class="player-percent">${percent}%</div>
             `;
@@ -129,18 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- INTERACTION ---
+    // --- EVENTS ---
     betBtn.addEventListener('click', () => {
         const val = parseFloat(betInput.value);
         if (isNaN(val) || val < 0.1) return;
         if (val > myBalance) {
-            window.Telegram.WebApp.showAlert("Мало денег!");
+            window.Telegram.WebApp.showAlert("Недостаточно баланса!");
             return;
         }
-        addBet(val, '@you', '#10b981');
+
         myBalance -= val;
         updateBalanceUI();
+        handleNewBet(val, '@you', '#10b981');
         betInput.value = '';
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
     });
 
     quickBtns.forEach(btn => {
@@ -150,55 +167,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    clearBtn.addEventListener('click', () => {
-        betInput.value = '';
-    });
+    clearBtn.addEventListener('click', () => { betInput.value = ''; });
 
-    function addBet(amount, name, color) {
-        if (isSpinning) return;
-
-        // SUMMATION LOGIC: Check if player already exists
-        const pIdx = players.findIndex(p => p.name === name);
-        if (pIdx >= 0) {
-            // Add to existing bet
-            players[pIdx].bet += amount;
-        } else {
-            // New entry
-            players.push({ name, bet: amount, color });
-        }
-
-        if (!timerStarted) {
-            startTimer();
-            timerStarted = true;
-            botInterval = setInterval(spawnBotBet, 3000);
-        }
-
-        updateGameState();
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-    }
-
-    function spawnBotBet() {
-        if (isSpinning) return;
-        if (Math.random() > 0.5) return;
-
-        const bot = botPool[Math.floor(Math.random() * botPool.length)];
-        const amount = (Math.random() * 5 + 1);
-        addBet(amount, bot.name, bot.color);
-    }
-
-    function startTimer() {
+    // --- ROUND LOGIC ---
+    function startRound() {
         timerInterval = setInterval(() => {
             if (roundTime > 0) {
                 roundTime--;
                 const m = Math.floor(roundTime / 60);
                 const s = roundTime % 60;
-                timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                timerDisplay.textContent = `${m}:${s < 10 ? '0' + s : s}`;
             } else {
                 clearInterval(timerInterval);
                 clearInterval(botInterval);
                 spinWheel();
             }
         }, 1000);
+
+        botInterval = setInterval(spawnBotBet, 4000);
+    }
+
+    function spawnBotBet() {
+        if (isSpinning) return;
+        const bot = botPool[Math.floor(Math.random() * botPool.length)];
+        const amount = Math.floor(Math.random() * 10) + 1;
+        handleNewBet(amount, bot.name, bot.color);
     }
 
     function spinWheel() {
@@ -208,11 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const total = getTotalPot();
         const winningTicket = Math.random() * total;
-
         let acc = 0;
         let winner = players[0];
-        let wStart = 0;
-        let wEnd = 0;
+        let wStart = 0, wEnd = 0;
 
         for (let p of players) {
             if (winningTicket >= acc && winningTicket < acc + p.bet) {
@@ -225,31 +216,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const winCenter = (wStart + wEnd) / 2;
-        const targetRot = (360 * 5) + (360 - winCenter) - 90;
+        const rotation = (360 * 6) + (360 - winCenter) - 90;
 
         wheelElement.style.transition = "transform 6s cubic-bezier(0.1, 0, 0.1, 1)";
-        wheelElement.style.transform = `rotate(${targetRot}deg)`;
+        wheelElement.style.transform = `rotate(${rotation}deg)`;
 
         setTimeout(() => {
+            // Fair payout calculation
             const othersMoney = total - winner.bet;
-            const houseFee = othersMoney * 0.05;
-            const netWin = othersMoney - houseFee;
-            const finalPayout = winner.bet + netWin;
+            const fee = othersMoney * 0.05;
+            const payout = total - fee;
 
             timerDisplay.textContent = "WINNER!";
             timerDisplay.style.color = "#10b981";
 
             if (winner.name === '@you') {
-                myBalance += finalPayout;
+                myBalance += payout;
                 updateBalanceUI();
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                window.Telegram.WebApp.showAlert(`ВЫ ВЫИГРАЛИ! 🎉 +${finalPayout.toFixed(2)} USDT`);
+                window.Telegram.WebApp.showAlert(`ПОБЕДА! 🎉 Вы выиграли ${payout.toFixed(2)} USDT`);
             } else {
-                window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-                window.Telegram.WebApp.showAlert(`Выиграл ${winner.name}`);
+                window.Telegram.WebApp.showAlert(`Выиграл ${winner.name}. Попробуйте еще раз!`);
             }
 
-            setTimeout(() => location.reload(), 5000);
+            setTimeout(() => location.reload(), 4000);
         }, 6500);
     }
 
