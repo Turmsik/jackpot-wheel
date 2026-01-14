@@ -271,9 +271,13 @@ async def run_api():
     
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 5000)
+    
+    # Railway дает порт в переменной окружения. Если её нет (локально) - юзаем 5000
+    port = int(os.environ.get("PORT", 5000))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    
     await site.start()
-    print("✅ API Server started on port 5000 (0.0.0.0)")
+    print(f"✅ API Server started on port {port} (0.0.0.0)")
 
 async def main():
     init_db()

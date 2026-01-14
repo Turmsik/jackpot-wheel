@@ -1,6 +1,6 @@
 aiogram>=3.17.0
-flask
-google-generativeai
+aiohttp
+aiohttp_cors
 python-dotenv
 pydantic>=2.10.5
 aiocryptopay
