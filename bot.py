@@ -182,39 +182,34 @@ async def admin_panel(message: types.Message):
     conn.close()
     
 async def get_balance_handler(request):
-    uid = request.query.get("user_id")
-    if not uid:
+    uid_str = request.query.get("user_id")
+    if not uid_str:
         return web.json_response({"error": "no user_id"}, status=400)
     
-    balance = get_user_balance(int(uid))
-    logging.info(f"API: GET balance for {uid} -> {balance}")
+    uid = int(uid_str)
+    balance = get_user_balance(uid)
+    print(f"📡 [API] Запрос баланса: User {uid} -> {balance} USDT")
     return web.json_response({"balance": balance})
 
 async def handle_bet(request):
     data = await request.json()
-    uid = data.get("user_id")
-    amount = data.get("amount")
-
-    if not uid or amount is None:
-        return web.Response(text="Invalid data", status=400)
+    uid = int(data.get("user_id"))
+    amount = float(data.get("amount"))
 
     # Вычитаем ставку из БД сразу
     update_user_balance(uid, -amount)
     new_balance = get_user_balance(uid)
     
-    logging.info(f"API: BET from {uid}: -{amount} USDT. Actual balance: {new_balance}")
+    print(f"💸 [API] СТАВКА: User {uid} поставил -{amount} USDT. Остаток: {new_balance}")
     return web.json_response({"status": "ok", "new_balance": new_balance})
 
 async def handle_win(request):
     data = await request.json()
-    uid = data.get("user_id")
-    win_amount = data.get("amount")
-    profit_fee = data.get("fee", 0) 
+    uid = int(data.get("user_id"))
+    win_amount = float(data.get("amount"))
+    profit_fee = float(data.get("fee", 0)) 
 
-    if not uid or win_amount is None:
-        return web.Response(text="Invalid data", status=400)
-
-    logging.info(f"API: WIN for {uid}: +{win_amount} USDT")
+    print(f"🏆 [API] ВЫИГРЫШ: User {uid} получил +{win_amount} USDT (Комиссия: {profit_fee})")
     
     # 1. Обновляем баланс игрока в БД
     update_user_balance(uid, win_amount)

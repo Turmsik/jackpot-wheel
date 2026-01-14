@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {
             console.error("Balance sync failed. Bot down?");
+            // window.Telegram.WebApp.showAlert("⚠️ Не удалось связаться с Ботом. Баланс может быть устаревшим.");
         }
     }
 
