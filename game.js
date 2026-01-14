@@ -37,11 +37,29 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: '@degen_1337', color: '#ef4444' }
     ];
 
-    function init() {
+    async function init() {
         resizeCanvas();
         updateBalanceUI();
         updateGameState();
         window.Telegram.WebApp.expand();
+
+        // Синхронизируем баланс с ботом ПРИ ЗАПУСКЕ (реальный баланс из БД)
+        await syncBalance();
+    }
+
+    async function syncBalance() {
+        if (!uParam) return;
+        try {
+            const API_URL = `http://192.168.1.11:5000/api/balance?user_id=${uParam}`;
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            if (data.balance !== undefined) {
+                myBalance = data.balance;
+                updateBalanceUI();
+            }
+        } catch (e) {
+            console.error("Balance sync failed. Bot down?");
+        }
     }
 
     function updateBalanceUI() {
@@ -181,8 +199,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 await notifyBotOfWin(uParam, payout, fee);
             }
 
-            setTimeout(() => location.reload(), 3000);
+            // Просто сбрасываем раунд, деньги остаются в памяти
+            setTimeout(() => resetGame(), 3000);
         }, 6500);
+    }
+
+    function resetGame() {
+        players = [];
+        roundTime = 30;
+        isSpinning = false;
+        timerStarted = false;
+        timerDisplay.textContent = "--:--";
+        timerDisplay.style.color = "#ef4444";
+        potDisplay.textContent = "0.00";
+        wheelWrapper.style.transition = "none";
+        wheelWrapper.style.transform = "rotate(-90deg)";
+        updateGameState();
     }
 
     async function notifyBotOfWin(userId, amount, fee) {

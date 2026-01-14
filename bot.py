@@ -204,19 +204,28 @@ async def handle_win(request):
     conn.close()
 
     # 3. Отправляем уведомление в Telegram
+    new_balance = get_user_balance(uid)
     try:
         await bot.send_message(
             uid, 
             f"🎰 <b>ПОБЕДА В КОЛЕСЕ!</b>\n\n"
             f"💰 Выигрыш: <b>+{win_amount:.2f} USDT</b>\n"
-            f"📈 Ваш баланс обновлен.\n\n"
+            f"� Ваш баланс: <b>{new_balance:.2f} USDT</b>\n\n"
             f"<i>Удачи в следующих раундах!</i>",
             parse_mode="HTML"
         )
     except Exception as e:
         logging.error(f"Failed to send win message to {uid}: {e}")
 
-    return web.json_response({"status": "ok", "new_balance": get_user_balance(uid)})
+    return web.json_response({"status": "ok", "new_balance": new_balance})
+
+async def get_balance_handler(request):
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no user_id"}, status=400)
+    
+    balance = get_user_balance(int(uid))
+    return web.json_response({"balance": balance})
 
 async def run_api():
     app = web.Application()
@@ -229,8 +238,12 @@ async def run_api():
         )
     })
     
-    resource = app.router.add_resource("/api/win")
-    cors.add(resource.add_route("POST", handle_win))
+    # Регистрация маршрутов
+    win_res = app.router.add_resource("/api/win")
+    cors.add(win_res.add_route("POST", handle_win))
+    
+    bal_res = app.router.add_resource("/api/balance")
+    cors.add(bal_res.add_route("GET", get_balance_handler))
     
     runner = web.AppRunner(app)
     await runner.setup()
