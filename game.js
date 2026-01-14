@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const betInput = document.getElementById('custom-bet-input');
     const betBtn = document.getElementById('place-custom-bet');
     const userBalanceDisplay = document.getElementById('user-balance');
+    const statusDot = document.getElementById('status-dot');
 
     let players = [];
 
@@ -56,13 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.balance !== undefined) {
                 myBalance = data.balance;
                 updateBalanceUI();
+                statusDot.classList.remove('disconnected');
+                statusDot.classList.add('connected');
                 console.log("Balance synced with Bot API:", myBalance);
-                // Показываем маленькую подсказку, что данные подтянулись
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
         } catch (e) {
             console.error("Balance sync failed. Bot down?");
-            // window.Telegram.WebApp.showAlert("⚠️ Не удалось связаться с Ботом. Баланс может быть устаревшим.");
+            statusDot.classList.remove('connected');
+            statusDot.classList.add('disconnected');
         }
     }
 

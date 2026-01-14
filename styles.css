@@ -185,7 +185,10 @@ body {
 }
 
 .user-balance-box {
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
     background: #18191c;
     border: 1px dashed #343740;
     border-radius: 8px;
@@ -193,6 +196,24 @@ body {
     font-size: 13px;
     font-weight: 800;
     color: #fbbf24;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: background 0.3s;
+}
+
+.status-dot.connected {
+    background: #10b981;
+    box-shadow: 0 0 5px #10b981;
+}
+
+.status-dot.disconnected {
+    background: #ef4444;
+    box-shadow: 0 0 5px #ef4444;
 }
 
 
