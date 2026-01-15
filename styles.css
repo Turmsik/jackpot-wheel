@@ -88,10 +88,11 @@ body {
 }
 
 .timer {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 800;
     color: #ff2e2e;
     text-shadow: 0 0 10px #ff2e2e, 0 0 20px rgba(255, 46, 46, 0.5);
+    white-space: nowrap;
 }
 
 .pot-total {
@@ -99,7 +100,7 @@ body {
     color: #00ffaa;
     font-weight: 800;
     margin-top: 5px;
-    text-shadow: 0 0 8px #00ffaa;
+    text-shadow: 0 0 12px #00ffaa, 0 0 5px #fff;
 }
 
 /* Betting Panel */

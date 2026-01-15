@@ -34,11 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let botInterval = null;
 
     const botPool = [
-        { name: '@crypto_king', color: '#00fbff' }, // Neon Cyan
-        { name: '@ton_master', color: '#ff00ff' }, // Neon Pink
-        { name: '@lucky_guy', color: '#39ff14' },   // Neon Green
-        { name: '@whale_🐋', color: '#fff200' },    // Neon Yellow
-        { name: '@degen_1337', color: '#ff5f1f' }   // Neon Orange
+        { name: '@crypto_king', color: '#00fbff' }, // Electric Cyan
+        { name: '@ton_master', color: '#ff00ff' }, // Magenta
+        { name: '@lucky_guy', color: '#bfff00' },   // Toxic Green
+        { name: '@whale_🐋', color: '#ffff00' },    // Pure Yellow
+        { name: '@degen_1337', color: '#ff6b00' }   // Bright Orange
     ];
 
     async function init() {
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             ctx.shadowBlur = 0; // Отключаем тень для заливки, чтобы не мылило
             ctx.fillStyle = p.color;
-            ctx.globalAlpha = 0.8; // Делаем чуть прозрачным для "стеклянного" эффекта
+            ctx.globalAlpha = 0.9; // Делаем почти непрозрачным для яркости
             ctx.fill();
             ctx.globalAlpha = 1.0;
 
@@ -132,9 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.beginPath();
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.strokeStyle = '#fff'; // Яркая белая сердцевина неона
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10;
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 15; // Больше свечения
             ctx.shadowColor = p.color; // Цветное свечение неона
+            ctx.stroke();
+
+            // Дополнительный тонкий контур для эффекта "сияния"
+            ctx.lineWidth = 0.5;
+            ctx.shadowBlur = 2;
             ctx.stroke();
 
             start += slice;
