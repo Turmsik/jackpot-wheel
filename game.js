@@ -96,6 +96,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateGameState() {
         const total = players.reduce((s, p) => s + p.bet, 0);
         potDisplay.textContent = total.toFixed(2);
+
+        // ДИНАМИЧЕСКИЙ РАЗМЕР ШРИФТА (чтобы всё влезало)
+        if (total >= 100000) {
+            potDisplay.style.fontSize = "16px";
+            timerDisplay.style.fontSize = "16px";
+        } else if (total >= 10000) {
+            potDisplay.style.fontSize = "18px";
+            timerDisplay.style.fontSize = "18px";
+        } else if (total >= 1000) {
+            potDisplay.style.fontSize = "22px";
+            timerDisplay.style.fontSize = "22px";
+        } else {
+            potDisplay.style.fontSize = "26px";
+            if (!isSpinning) timerDisplay.style.fontSize = "26px";
+        }
+
         if (total > 0) {
             drawWheel(total);
             renderList(total);
