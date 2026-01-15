@@ -18,11 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const bParam = params.get('balance');
     let uParam = params.get('user_id');
+    let myUsername = "@you";
 
     // Если в URL нет ID, берем его напрямую из Телеграма (очень важно для кнопки меню!)
-    if (!uParam && window.Telegram && window.Telegram.WebApp.initDataUnsafe.user) {
-        uParam = window.Telegram.WebApp.initDataUnsafe.user.id;
-        console.log("UserID loaded from WebApp API:", uParam);
+    if (window.Telegram && window.Telegram.WebApp.initDataUnsafe.user) {
+        const user = window.Telegram.WebApp.initDataUnsafe.user;
+        uParam = uParam || user.id;
+        myUsername = user.username ? `@${user.username}` : (user.first_name || "@you");
+        console.log("UserID loaded from WebApp API:", uParam, "Username:", myUsername);
     }
 
     let myBalance = 100.00;
@@ -239,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             myBalance -= val;
             updateBalanceUI();
-            handleNewBet(val, '@you', '#10b981');
+            handleNewBet(val, myUsername, '#10b981');
             betInput.value = '';
         }
     });
@@ -314,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             // Уведомление ТОЛЬКО если выиграл я
-            if (winner.name === '@you') {
+            if (winner.name === myUsername) {
                 window.Telegram.WebApp.showAlert(`🚀 ПОБЕДА! Вы выиграли ${payout.toFixed(2)} USDT`);
                 myBalance += payout;
                 updateBalanceUI();
