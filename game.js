@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('wheel-canvas');
     const ctx = canvas.getContext('2d');
-    const potDisplay = document.getElementById('pot-amount');
+    let potDisplay = document.getElementById('pot-amount');
     const timerDisplay = document.getElementById('timer');
     const playersList = document.getElementById('players-list');
     const wheelWrapper = document.getElementById('wheel-spin-wrapper');
@@ -292,9 +292,13 @@ document.addEventListener('DOMContentLoaded', () => {
             timerDisplay.style.fontSize = "20px";
             timerDisplay.style.color = "#00ffaa";
 
-            // Вместо суммы банка пишем имя (компактно)
-            potDisplay.textContent = winner.name;
-            potDisplay.style.fontSize = winner.name.length > 10 ? "14px" : "18px";
+            // Показываем имя И сумму выигрыша (многострочно)
+            const fontSize = winner.name.length > 12 ? "12px" : "15px";
+            const potContainer = document.getElementById('pot-total-container');
+            potContainer.innerHTML = `
+                <div style="font-size: ${fontSize}; color: #fff; font-weight: 700; line-height: 1.1;">${winner.name}</div>
+                <div style="font-size: 14px; color: #00ffaa; font-weight: 800; margin-top: 2px;">+${payout.toFixed(2)} USDT</div>
+            `;
 
             // Уведомление ТОЛЬКО если выиграл я
             if (winner.name === '@you') {
@@ -318,8 +322,12 @@ document.addEventListener('DOMContentLoaded', () => {
         timerDisplay.textContent = "--:--";
         timerDisplay.style.color = "#ef4444";
         timerDisplay.style.fontSize = ""; // Возвращаем компактный размер из CSS
-        potDisplay.textContent = "0.00";
-        potDisplay.style.fontSize = ""; // Сбрасываем размер после имени победителя
+
+        // СБРОС ЦЕНТРАЛЬНОГО ТАБЛО
+        const potContainer = document.getElementById('pot-total-container');
+        potContainer.innerHTML = `$ <span id="pot-amount">0.00</span>`;
+        potDisplay = document.getElementById('pot-amount'); // Переподключаем элемент
+
         wheelWrapper.style.transition = "none";
         wheelWrapper.style.transform = "rotate(-90deg)";
         updateGameState();
