@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, 300, 300);
         let start = 0;
 
-        // Рисуем каждый сектор
         players.forEach(p => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
@@ -119,29 +118,28 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
-            // 1. Темная база сектора
-            ctx.fillStyle = "#111"; // Глубокий темный фон
+            // 1. ПИЦЦА-ГРАДИЕНТ (Свет из центра)
+            // Центр осветлен до половины ячейки, затем уходит в темноту
+            const grad = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
+            grad.addColorStop(0, "#fff"); // Центр - белый свет
+            grad.addColorStop(0.5, p.color); // До середины - основной яркий цвет
+            grad.addColorStop(1, adjustColor(p.color, -120)); // Края - очень темный неон
+
+            ctx.fillStyle = grad;
             ctx.fill();
 
-            // 2. Внутреннее свечение (эффект неона от стенок)
-            ctx.clip();
+            // 2. ТОНКАЯ ГРАНИЦА ЦВЕТА ЯЧЕЙКИ (как просил)
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = p.color;
+
+            // Сама дуга
             ctx.beginPath();
             ctx.arc(150, 150, 148, start, start + slice);
-            ctx.strokeStyle = p.color;
-            ctx.lineWidth = 60; // Это создает заполнение ~30% от края
-            ctx.globalAlpha = 0.4;
-            ctx.shadowBlur = 40;
-            ctx.shadowColor = p.color;
             ctx.stroke();
 
-            // 3. Яркая неоновая нить (белая сердцевина)
-            ctx.globalAlpha = 1.0;
-            ctx.shadowBlur = 8;
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 1; // Делаем края тоньше (было 2)
-            ctx.stroke();
-
-            // Отрисовка боковых "спиц" ячейки
+            // Боковые линии (спицы)
             ctx.beginPath();
             ctx.moveTo(150, 150);
             const endX = 150 + 148 * Math.cos(start);
@@ -153,30 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
             start += slice;
         });
 
-        // 4. ГЛОБАЛЬНЫЙ ГЛЯНЕЦ (Эффект стеклянного купола как на аве)
-        // Рисуем большой полумесяц-блик сверху
+        // 3. ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
         ctx.save();
         ctx.beginPath();
         ctx.arc(150, 150, 148, 0, Math.PI * 2);
-        ctx.clip();
-
-        const grad = ctx.createRadialGradient(150, 100, 0, 150, 150, 200);
-        grad.addColorStop(0, "rgba(255, 255, 255, 0.3)");
-        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
-        grad.addColorStop(1, "rgba(0, 0, 0, 0.3)");
-
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Верхний яркий блик
-        ctx.beginPath();
-        ctx.ellipse(150, 60, 100, 40, 0, 0, Math.PI * 2);
-        const shine = ctx.createLinearGradient(0, 20, 0, 100);
-        shine.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+        const shine = ctx.createRadialGradient(150, 50, 10, 150, 150, 250);
+        shine.addColorStop(0, "rgba(255, 255, 255, 0.2)");
         shine.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = shine;
         ctx.fill();
-
         ctx.restore();
 
         ctx.shadowBlur = 0;
