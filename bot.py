@@ -101,6 +101,7 @@ async def deposit_menu(call: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="10 USDT", callback_data="buy_10"), InlineKeyboardButton(text="50 USDT", callback_data="buy_50")],
         [InlineKeyboardButton(text="100 USDT", callback_data="buy_100"), InlineKeyboardButton(text="500 USDT", callback_data="buy_500")],
+        [InlineKeyboardButton(text="10,000 USDT", callback_data="buy_10000"), InlineKeyboardButton(text="100,000 USDT", callback_data="buy_100000")],
         [InlineKeyboardButton(text="« НАЗАД", callback_data="back_to_start")]
     ])
     await call.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
