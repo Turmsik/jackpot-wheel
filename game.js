@@ -109,51 +109,63 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, 300, 300);
         let start = 0;
 
-        // 1. Рисуем цветовые сектора
         players.forEach(p => {
             const slice = (p.bet / total) * 2 * Math.PI;
+
+            ctx.save();
+            // Кладём путь для криппинга и заливки
             ctx.beginPath();
             ctx.moveTo(150, 150);
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
-            ctx.fillStyle = p.color;
+            // 1. ТЕМНАЯ ОСНОВА (Глубина)
+            ctx.fillStyle = '#111';
             ctx.fill();
 
-            // Тонкий внутренний разделитель
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            start += slice;
-        });
-
-        // 2. ГЛОБАЛЬНЫЙ НЕОНОВЫЙ КОНТУР (поверх всех секторов)
-        start = 0;
-        players.forEach(p => {
-            const slice = (p.bet / total) * 2 * Math.PI;
-            ctx.beginPath();
-            ctx.arc(150, 150, 148, start, start + slice);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1.5;
-            ctx.shadowBlur = 20;
+            // 2. ВНУТРЕННИЙ ГРАДИЕНТ ОТ СТЕНОК (30%)
+            // Делаем эффект свечения, который "выходит" из краев ячейки
+            ctx.clip();
+            ctx.globalAlpha = 0.6;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 45; // Те самые ~30% от радиуса (150 * 0.3)
+            ctx.shadowBlur = 30;
             ctx.shadowColor = p.color;
             ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            ctx.shadowBlur = 0;
+
+            // 3. НЕОНОВЫЙ КОНТУР (Яркий "провод")
+            ctx.beginPath();
+            ctx.arc(150, 150, 148, start, start + slice);
+            ctx.strokeStyle = '#fff'; // Сердцевина
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.stroke();
+
+            // Боковые линии ячейки (разделители)
+            ctx.beginPath();
+            ctx.moveTo(150, 150);
+            const endX = 150 + 148 * Math.cos(start);
+            const endY = 150 + 148 * Math.sin(start);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            ctx.restore();
             start += slice;
         });
 
-        ctx.shadowBlur = 0;
-
-        // 3. ГЛОБАЛЬНЫЙ СТЕКЛЯННЫЙ БЛИК (на всё колесо сразу)
+        // 4. ФИНАЛЬНЫЙ ОБЩИЙ ГЛЯНЕЦ (Мягкий, сверху)
         ctx.beginPath();
         ctx.arc(150, 150, 148, 0, Math.PI * 2);
-        const shine = ctx.createLinearGradient(0, 0, 0, 300);
-        shine.addColorStop(0, "rgba(255, 255, 255, 0.4)");
-        shine.addColorStop(0.4, "rgba(255, 255, 255, 0.1)");
-        shine.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
-        shine.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+        const shine = ctx.createLinearGradient(150, 0, 150, 150);
+        shine.addColorStop(0, "rgba(255, 255, 255, 0.1)");
+        shine.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = shine;
         ctx.fill();
+
+        ctx.shadowBlur = 0;
     }
 
     // Хелпер для затемнения цветов для градиента
@@ -267,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payout = winner.bet + netWin;
 
             timerDisplay.textContent = "Winner!";
-            timerDisplay.style.fontSize = "18px"; // Делаем меньше, чтобы не вылетало
+            timerDisplay.style.fontSize = "16px"; // Еще чуть меньше
             timerDisplay.style.color = "#00ffaa";
 
             window.Telegram.WebApp.showAlert(`ПОБЕДИТЕЛЬ: ${winner.name}\nВыигрыш: ${payout.toFixed(2)} USDT`);
