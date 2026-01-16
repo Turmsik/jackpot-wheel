@@ -156,27 +156,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
             ctx.save();
+
+            // НЕОНОВОЕ СВЕЧЕНИЕ ЗА СЕГМЕНТОМ (glow effect)
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = p.color;
+
             ctx.beginPath();
             ctx.moveTo(150, 150);
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
-            // ГРАДИЕНТ (элитный вид)
+            // ГРАДИЕНТ (элитный вид с бо́льшим покрытием цвета)
             const grad = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
             grad.addColorStop(0, "#fff");
-            grad.addColorStop(0.15, p.color);
-            grad.addColorStop(0.6, p.color);
-            grad.addColorStop(1, adjustColor(p.color, -120));
+            grad.addColorStop(0.1, p.color);   // Цвет начинается раньше
+            grad.addColorStop(0.7, p.color);   // Цвет держится дольше
+            grad.addColorStop(1, adjustColor(p.color, -100));
 
             ctx.fillStyle = grad;
             ctx.fill();
 
-            // 2. ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ (для чёткости)
-            ctx.strokeStyle = '#0a0a0f'; // Почти чёрная линия
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur = 0; // Сбрасываем перед разделителями
 
-            // Боковые линии (спицы) — разделители
+            // ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ
+            ctx.strokeStyle = '#0a0a0f';
+            ctx.lineWidth = 2;
+
             ctx.beginPath();
             ctx.moveTo(150, 150);
             const endX = 150 + 148 * Math.cos(start);
