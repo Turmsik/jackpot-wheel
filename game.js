@@ -44,16 +44,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let botInterval = null;
 
     const botPool = [
-        { name: '@cyber_ghost', color: '#ff003c' }, { name: '@neon_heart', color: '#00ff41' },
-        { name: '@luck_star', color: '#0066ff' }, { name: '@gold_king', color: '#ffea00' },
-        { name: '@void_walker', color: '#be00ff' }, { name: '@hyper_drive', color: '#00facd' },
-        { name: '@quantum_bit', color: '#ff00d4' }, { name: '@plasma_coil', color: '#4500ff' },
-        { name: '@nova_flare', color: '#ff5a00' }, { name: '@glitch_fix', color: '#00c3ff' },
-        { name: '@laser_beam', color: '#ff0084' }, { name: '@acid_rain', color: '#9dff00' },
-        { name: '@blaze_it', color: '#ff8a00' }, { name: '@toxic_fog', color: '#00ff80' },
-        { name: '@aqua_glow', color: '#00e4ff' }, { name: '@sky_link', color: '#2a00ff' },
-        { name: '@ruby_eye', color: '#ff005a' }, { name: '@amber_wave', color: '#ffc600' },
-        { name: '@signal_lost', color: '#00ffbc' }, { name: '@neon_pulse', color: '#ff0024' }
+        { name: '@cyber_ghost', color: '#FF0000' }, // Чистый красный
+        { name: '@neon_heart', color: '#FF8C00' },  // Оранжевый
+        { name: '@luck_star', color: '#FFD700' },   // Золотой
+        { name: '@gold_king', color: '#ADFF2F' },   // Лаймовый
+        { name: '@void_walker', color: '#00FF00' }, // Чистый зелёный
+        { name: '@hyper_drive', color: '#00FA9A' }, // Мятный
+        { name: '@quantum_bit', color: '#00FFFF' }, // Бирюзовый
+        { name: '@plasma_coil', color: '#1E90FF' }, // Голубой
+        { name: '@nova_flare', color: '#0000FF' },  // Синий
+        { name: '@glitch_fix', color: '#4B0082' },  // Индиго
+        { name: '@laser_beam', color: '#8B00FF' },  // Фиолетовый
+        { name: '@acid_rain', color: '#FF00FF' },   // Маджента
+        { name: '@blaze_it', color: '#FF1493' },    // Розовый
+        { name: '@toxic_fog', color: '#DC143C' },   // Малиновый
+        { name: '@aqua_glow', color: '#40E0D0' },   // Бирюза светлая
+        { name: '@sky_link', color: '#7B68EE' },    // Сиреневый
+        { name: '@ruby_eye', color: '#FF4500' },    // Красно-оранжевый
+        { name: '@amber_wave', color: '#32CD32' },  // Травяной
+        { name: '@signal_lost', color: '#00CED1' }, // Тёмная бирюза
+        { name: '@neon_pulse', color: '#9400D3' }   // Тёмный фиолетовый
     ];
 
     async function init() {
