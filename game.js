@@ -156,27 +156,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
             ctx.save();
-
-            // НЕОНОВОЕ СВЕЧЕНИЕ ЗА СЕГМЕНТОМ (glow effect)
-            ctx.shadowBlur = 25;
-            ctx.shadowColor = p.color;
-
             ctx.beginPath();
             ctx.moveTo(150, 150);
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
-            // ГРАДИЕНТ (элитный вид с бо́льшим покрытием цвета)
+            // ГРАДИЕНТ (элитный вид)
             const grad = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
             grad.addColorStop(0, "#fff");
-            grad.addColorStop(0.1, p.color);   // Цвет начинается раньше
-            grad.addColorStop(0.7, p.color);   // Цвет держится дольше
+            grad.addColorStop(0.1, p.color);
+            grad.addColorStop(0.7, p.color);
             grad.addColorStop(1, adjustColor(p.color, -100));
 
             ctx.fillStyle = grad;
             ctx.fill();
-
-            ctx.shadowBlur = 0; // Сбрасываем перед разделителями
 
             // ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ
             ctx.strokeStyle = '#0a0a0f';
@@ -193,7 +186,18 @@ document.addEventListener('DOMContentLoaded', () => {
             start += slice;
         });
 
-        // 3. ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
+        // ВНЕШНЕЕ СВЕЧЕНИЕ (ореол вокруг колеса)
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(150, 150, 148, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00f2fe'; // Неоновый цвет ореола
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#00f2fe';
+        ctx.stroke();
+        ctx.restore();
+
+        // ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
         ctx.save();
         ctx.beginPath();
         ctx.arc(150, 150, 148, 0, Math.PI * 2);
