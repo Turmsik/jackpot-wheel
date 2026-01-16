@@ -161,15 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
-            // 1. УЛУЧШЕННЫЙ ПИЦЦА-ГРАДИЕНТ (Глубокий свет из центра)
-            const grad = ctx.createRadialGradient(150, 150, 0, 150, 150, 150);
-            grad.addColorStop(0, "#fff"); // Ослепительный центр
-            grad.addColorStop(0.1, "#fff"); // Удерживаем яркость чуть дольше
-            grad.addColorStop(0.4, p.color); // Плавный переход в основной неон
-            grad.addColorStop(0.8, adjustColor(p.color, -80)); // Начало затемнения
-            grad.addColorStop(1, adjustColor(p.color, -160)); // Глубокая тьма по краям
-
-            ctx.fillStyle = grad;
+            // ПЛОСКИЙ ЦВЕТ (без градиента)
+            ctx.fillStyle = p.color;
             ctx.fill();
 
             // 2. ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ (для чёткости)
