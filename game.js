@@ -186,14 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
             start += slice;
         });
 
-        // ВНЕШНЕЕ СВЕЧЕНИЕ (ореол вокруг колеса)
+        // ВНЕШНЕЕ СВЕЧЕНИЕ (мощное, как у таймера)
         ctx.save();
         ctx.beginPath();
         ctx.arc(150, 150, 148, 0, Math.PI * 2);
-        ctx.strokeStyle = '#00f2fe'; // Неоновый цвет ореола
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 30;
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 5;
+        ctx.shadowBlur = 60;
         ctx.shadowColor = '#00f2fe';
+        ctx.stroke();
+        // Двойной слой для усиления эффекта
+        ctx.stroke();
         ctx.stroke();
         ctx.restore();
 
