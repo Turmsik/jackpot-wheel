@@ -43,28 +43,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerInterval = null;
     let botInterval = null;
 
-    const botPool = [
-        { name: '@cyber_ghost', color: '#FF0000' }, // Чистый красный
-        { name: '@neon_heart', color: '#FF8C00' },  // Оранжевый
-        { name: '@luck_star', color: '#FFD700' },   // Золотой
-        { name: '@gold_king', color: '#ADFF2F' },   // Лаймовый
-        { name: '@void_walker', color: '#00FF00' }, // Чистый зелёный
-        { name: '@hyper_drive', color: '#00FA9A' }, // Мятный
-        { name: '@quantum_bit', color: '#00FFFF' }, // Бирюзовый
-        { name: '@plasma_coil', color: '#1E90FF' }, // Голубой
-        { name: '@nova_flare', color: '#0000FF' },  // Синий
-        { name: '@glitch_fix', color: '#4B0082' },  // Индиго
-        { name: '@laser_beam', color: '#8B00FF' },  // Фиолетовый
-        { name: '@acid_rain', color: '#FF00FF' },   // Маджента
-        { name: '@blaze_it', color: '#FF1493' },    // Розовый
-        { name: '@toxic_fog', color: '#DC143C' },   // Малиновый
-        { name: '@aqua_glow', color: '#40E0D0' },   // Бирюза светлая
-        { name: '@sky_link', color: '#7B68EE' },    // Сиреневый
-        { name: '@ruby_eye', color: '#FF4500' },    // Красно-оранжевый
-        { name: '@amber_wave', color: '#32CD32' },  // Травяной
-        { name: '@signal_lost', color: '#00CED1' }, // Тёмная бирюза
-        { name: '@neon_pulse', color: '#9400D3' }   // Тёмный фиолетовый
+    const botNames = [
+        '@cyber_ghost', '@neon_heart', '@luck_star', '@gold_king', '@void_walker',
+        '@hyper_drive', '@quantum_bit', '@plasma_coil', '@nova_flare', '@glitch_fix',
+        '@laser_beam', '@acid_rain', '@blaze_it', '@toxic_fog', '@aqua_glow',
+        '@sky_link', '@ruby_eye', '@amber_wave', '@signal_lost', '@neon_pulse'
     ];
+
+    // ГЕНЕРАТОР ЦВЕТОВ (Golden Ratio) - Идеально разные цвета
+    let colorIndex = 0;
+    function getNextNeonColor() {
+        const goldenAngle = 137.508; // Золотой угол
+        const hue = (colorIndex * goldenAngle) % 360;
+        colorIndex++;
+        return `hsl(${hue}, 100%, 50%)`; // Максимальная насыщенность (Неон)
+    }
 
     async function init() {
         resizeCanvas();
@@ -119,7 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isSpinning) return;
         const pIdx = players.findIndex(p => p.name === name);
         if (pIdx >= 0) players[pIdx].bet += amount;
-        else players.push({ name, bet: amount, color });
+        else {
+            // Если цвет не передан (новый игрок/бот), генерируем уникальный
+            const finalColor = color || getNextNeonColor();
+            players.push({ name, bet: amount, color: finalColor });
+        }
         if (!timerStarted) { timerStarted = true; startRound(); }
         updateGameState();
     }
@@ -156,6 +153,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
             ctx.save();
+
+            // 2. ПОДСВЕТКА СЗАДИ ЯЧЕЙКИ (Свой цвет для каждого сегмента)
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = p.color;
+
             ctx.beginPath();
             ctx.moveTo(150, 150);
             ctx.arc(150, 150, 148, start, start + slice);
@@ -180,18 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
             start += slice;
         });
 
-        // ВНЕШНЕЕ СВЕЧЕНИЕ (мощное, как у таймера)
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(150, 150, 148, 0, Math.PI * 2);
-        ctx.strokeStyle = '#00f2fe';
-        ctx.lineWidth = 5;
-        ctx.shadowBlur = 60;
-        ctx.shadowColor = '#00f2fe';
-        ctx.stroke();
-        // Двойной слой для усиления эффекта
-        ctx.stroke();
-        ctx.stroke();
         ctx.restore();
 
         // ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
@@ -282,16 +272,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             else { clearInterval(timerInterval); clearInterval(botInterval); startSpinProcess(); }
         }, 1000);
-        let availableBots = [...botPool]; // Копия пула для уникальных ботов
+        let availableBots = [...botNames]; // Пул имен ботов
         botInterval = setInterval(() => {
             if (!isSpinning) {
-                // Сначала добавляем новых ботов, потом существующие докидывают
+                // Логика: если боты есть в пуле, заходят новые
+                // Если пул пуст, существующие боты докидывают ставки
                 if (availableBots.length > 0) {
                     const idx = Math.floor(Math.random() * availableBots.length);
-                    const bot = availableBots.splice(idx, 1)[0];
-                    handleNewBet(Math.floor(Math.random() * 15) + 5, bot.name, bot.color);
+                    const botName = availableBots.splice(idx, 1)[0];
+                    // Цвет генерируется автоматически в handleNewBet
+                    handleNewBet(Math.floor(Math.random() * 15) + 5, botName, null);
                 } else if (players.length > 0) {
-                    // Все боты в игре — случайный бот докидывает к своей ставке
                     const existingBot = players[Math.floor(Math.random() * players.length)];
                     if (existingBot.name !== myUsername) {
                         handleNewBet(Math.floor(Math.random() * 10) + 3, existingBot.name, existingBot.color);
@@ -300,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 2000);
     }
-
     function startSpinProcess() {
         isSpinning = true;
         timerDisplay.textContent = "ROLLING";
