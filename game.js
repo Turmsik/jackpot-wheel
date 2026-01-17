@@ -18,10 +18,12 @@ let timerInterval = null;
 let botInterval = null;
 let timerStarted = false;
 
-// Получаем user_id из URL (от Telegram)
+// Получаем параметры из URL
 const urlParams = new URLSearchParams(window.location.search);
 const uParam = urlParams.get('user_id');
 const myUsername = urlParams.get('username') || "You";
+// Инициализируем баланс сразу из URL, если есть, иначе 0
+myBalance = parseFloat(urlParams.get('balance')) || 0;
 
 // Генерация уникальных цветов (Golden Ratio)
 let colorHue = 0;
