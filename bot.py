@@ -86,6 +86,16 @@ async def start(message: types.Message, user: types.User = None):
         [InlineKeyboardButton(text="📤 ВЫВЕСТИ", callback_data="withdraw_menu")]
     ])
     
+    # Важно: Обновляем кнопку меню, чтобы она вела на правильный URL с балансом
+    from aiogram.types import MenuButtonWebApp
+    try:
+        await bot.set_chat_menu_button(
+            chat_id=user_id,
+            menu_button=MenuButtonWebApp(text="PLAY", web_app=WebAppInfo(url=app_url))
+        )
+    except Exception as e:
+        print(f"Failed to set menu button: {e}")
+
     # Если это колбэк (например кнопка "Назад"), редактируем, иначе шлем новое
     if user: 
         if isinstance(message, types.Message):
