@@ -86,8 +86,13 @@ async function syncBalance() {
         }
     } catch (e) {
         console.error("❌ API Connection Failed:", e.message);
-        statusDot.classList.remove('connected');
-        statusDot.classList.add('disconnected');
+        // Если баланс уже есть (из URL), не пугаем юзера красной лампой
+        if (myBalance === 0) {
+            statusDot.classList.remove('connected');
+            statusDot.classList.add('disconnected');
+        } else {
+            console.log("⚠️ API fail, but using URL balance (Offline Mode)");
+        }
     }
 }
 
