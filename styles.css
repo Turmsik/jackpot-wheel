@@ -272,7 +272,7 @@ body {
 
 .quick-btn {
     flex: 1;
-    padding: 10px;
+    padding: 6px 4px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 6px;
     background: #1a1c22;
@@ -440,4 +440,21 @@ body {
     font-weight: 700;
     cursor: pointer;
 }
-.quick-btn { flex: 1; background: #2a2d35; color: #fff; border: none; border-radius: 6px; padding: 8px 5px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; } .quick-btn:active { transform: scale(0.95); background: #343740; }
+
+.quick-btn {
+    flex: 1;
+    background: #2a2d35;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 5px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.quick-btn:active {
+    transform: scale(0.95);
+    background: #343740;
+}
