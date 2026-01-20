@@ -123,7 +123,7 @@ async def game_loop():
                             profit_fee = (total_bank - winner["bet"]) * 0.10
                             payout = winner["bet"] + net_win
                             
-                            # 1. Зачисляем в БД
+                            # 1. Зачисляем в БД (сразу, чтобы баланс был верным при рефреше)
                             update_user_balance(uid, payout)
                             
                             # 2. Обновляем профит админа
@@ -133,18 +133,21 @@ async def game_loop():
                             conn.commit()
                             conn.close()
                             
-                            # 3. Шлем уведомление
-                            new_bal = get_user_balance(uid)
-                            try:
-                                asyncio.create_task(bot.send_message(
-                                    uid,
-                                    f"🎰 <b>ПОБЕДА В КОЛЕСЕ!</b>\n\n"
-                                    f"💰 Выигрыш: <b>+{payout:.2f} USDT</b>\n"
-                                    f"💳 Ваш баланс: <b>{new_bal:.2f} USDT</b>\n\n"
-                                    f"<i>Раунд завершен успешно!</i>",
-                                    parse_mode="HTML"
-                                ))
-                            except: pass
+                            # 3. Шлем уведомление С ЗАДЕРЖКОЙ (чтобы не спойлерить анимацию)
+                            async def delayed_notify(user_id, amount, balance):
+                                await asyncio.sleep(7) # Ждем пока колесо докрутится
+                                try:
+                                    await bot.send_message(
+                                        user_id,
+                                        f"🎰 <b>ПОБЕДА В КОЛЕСЕ!</b>\n\n"
+                                        f"💰 Выигрыш: <b>+{amount:.2f} USDT</b>\n"
+                                        f"💳 Ваш баланс: <b>{balance:.2f} USDT</b>\n\n"
+                                        f"<i>Раунд завершен успешно!</i>",
+                                        parse_mode="HTML"
+                                    )
+                                except: pass
+                            
+                            asyncio.create_task(delayed_notify(uid, payout, get_user_balance(uid)))
                     
                     # Ждем 10 секунд (время анимации + показ результата)
                     await asyncio.sleep(10)
@@ -154,16 +157,16 @@ async def game_loop():
                 game_state["round_time"] = 120
                 await asyncio.sleep(1)
                 
-                # Добавляем ботов ТОЛЬКО если есть хотя бы 1 реальный игрок
-                if len(game_state["players"]) >= 1 and len(game_state["players"]) < 15:
-                    # Раз в 8-12 секунд закидываем бота (чаще чем раньше)
-                    if os.urandom(1)[0] < 45: 
-                        bot_names = ["Luck", "Neon", "Cyber", "Void", "Gold", "Star", "Apex", "Nova", "Bit", "Zen"]
+                # Добавляем ботов постоянно (для тестов), до 19 штук
+                if len(game_state["players"]) < 19:
+                    # Раз в 5-10 секунд закидываем бота
+                    if os.urandom(1)[0] < 70: 
+                        bot_names = ["Apex", "Nova", "Bit", "Zen", "Luna", "Mars", "Pluto", "Orion", "Titan", "Atom", "Bolt", "Flux", "Neon", "Void", "Gold"]
                         bot_suffix = os.urandom(2).hex()
                         b_name = f"@{random.choice(bot_names)}_{bot_suffix}" if 'random' in globals() else f"@bot_{bot_suffix}"
                         
-                        # Рандомная ставка от 0.1 до 25 USDT
-                        b_bet = round(0.1 + (os.urandom(1)[0] / 255) * 24.9, 1)
+                        # Рандомная ставка от 0.1 до 50 USDT
+                        b_bet = round(0.1 + (os.urandom(1)[0] / 255) * 49.9, 1)
                         
                         game_state["players"].append({
                             "user_id": None, # Бот
