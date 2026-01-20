@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // В центре пишем кто победил
             timerDisplay.textContent = "Winner!";
             timerDisplay.style.fontSize = "20px";
-            timerDisplay.style.color = "#00FF00"; // ПРИЯТНЫЙ ЗЕЛЕНЫЙ ДЛЯ ПОБЕДЫ
+            timerDisplay.style.color = "#FF0000"; // ВСЕГДА КРАСНЫЙ
 
             // Показываем имя И сумму выигрыша (многострочно)
             const fontSize = winner.name.length > 12 ? "12px" : "15px";
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isSpinning = false;
         timerStarted = false;
         timerDisplay.textContent = "--:--";
-        timerDisplay.style.color = "#ef4444";
+        timerDisplay.style.color = "#FF0000";
         timerDisplay.style.fontSize = ""; // Возвращаем компактный размер из CSS
 
         // СБРОС ЦЕНТРАЛЬНОГО ТАБЛО
