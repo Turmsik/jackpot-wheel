@@ -152,28 +152,28 @@ async def game_loop():
                     # Ждем 10 секунд (время анимации + показ результата)
                     await asyncio.sleep(10)
                     reset_global_game()
-            else:
-                # Меньше 2 игроков -> Ждем, таймер не идет
-                game_state["round_time"] = 120
-                await asyncio.sleep(1)
-                
-                # Добавляем ботов постоянно (для тестов), до 19 штук
-                if len(game_state["players"]) < 19:
-                    # Раз в 5-10 секунд закидываем бота
-                    if os.urandom(1)[0] < 70: 
-                        bot_names = ["Apex", "Nova", "Bit", "Zen", "Luna", "Mars", "Pluto", "Orion", "Titan", "Atom", "Bolt", "Flux", "Neon", "Void", "Gold"]
-                        bot_suffix = os.urandom(2).hex()
-                        b_name = f"@{random.choice(bot_names)}_{bot_suffix}" if 'random' in globals() else f"@bot_{bot_suffix}"
-                        
-                        # Рандомная ставка от 0.1 до 50 USDT
-                        b_bet = round(0.1 + (os.urandom(1)[0] / 255) * 49.9, 1)
-                        
-                        game_state["players"].append({
-                            "user_id": None, # Бот
-                            "name": b_name,
-                            "bet": b_bet,
-                            "color": f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
-                        })
+
+            # Добавляем ботов постоянно (для тестов), до 19 штук
+            # Делаем это внутри блока waiting, но вне проверки >= 2 игроков
+            if len(game_state["players"]) < 19:
+                # Раз в 5-10 секунд закидываем бота
+                if os.urandom(1)[0] < 50: 
+                    bot_names = ["Apex", "Nova", "Bit", "Zen", "Luna", "Mars", "Pluto", "Orion", "Titan", "Atom", "Bolt", "Flux", "Neon", "Void", "Gold"]
+                    bot_suffix = os.urandom(2).hex()
+                    b_name = f"@{random.choice(bot_names)}_{bot_suffix}"
+                    
+                    # Рандомная ставка от 0.1 до 50 USDT
+                    b_bet = round(0.1 + (os.urandom(1)[0] / 255) * 49.9, 1)
+                    
+                    game_state["players"].append({
+                        "user_id": None, # Бот
+                        "name": b_name,
+                        "bet": b_bet,
+                        "color": f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
+                    })
+                    print(f"🤖 Bot Joined: {b_name} with {b_bet} USDT")
+            
+            await asyncio.sleep(1)
         else:
             await asyncio.sleep(1)
 
@@ -331,6 +331,10 @@ async def handle_bet(request):
     amount = float(data.get("amount"))
     name = data.get("name", "Unknown")
     color = data.get("color")
+
+    # ЗАПРЕЩАЕМ СТАВКИ ВО ВРЕМЯ СПИНА
+    if game_state["status"] == "spinning":
+        return web.json_response({"error": "round_is_spinning"}, status=400)
 
     # 1. Вычитаем ставку из БД
     update_user_balance(uid, -amount)

@@ -144,6 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 timerDisplay.style.color = "#FF0000";
                 timerDisplay.style.fontSize = "";
                 updateGameState();
+
+                // СИНХРОНИЗИРУЕМ БАЛАНС (для работы на 2 устройствах)
+                syncBalance();
+            }
+
+            // Блокируем кнопку ставки во время спина
+            if (state.status === 'spinning' || isSpinning) {
+                betBtn.disabled = true;
+                betBtn.style.opacity = "0.5";
+                betBtn.textContent = "ROLLING...";
+            } else {
+                betBtn.disabled = false;
+                betBtn.style.opacity = "1";
+                betBtn.textContent = "ПОСТАВИТЬ";
             }
 
         } catch (e) {
@@ -316,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     betBtn.addEventListener('click', async () => {
+        if (isSpinning) return;
         const val = parseFloat(betInput.value);
         if (val >= 0.1 && val <= myBalance) {
             // Сначала уведомляем бота о ставке, чтобы он вычел из БД
