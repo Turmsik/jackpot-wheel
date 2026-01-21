@@ -77,29 +77,30 @@ def update_user_balance(user_id, amount_cents, username=None):
 # ---------------------------------------------
 # БОТ И ГЛОБАЛЬНОЕ СОСТОЯНИЕ ИГРЫ
 # ---------------------------------------------
-def verify_init_data(init_data: str) -> bool:
-    """Проверка подлинности данных от Telegram WebApp"""
+def verify_init_data(init_data: str) -> dict:
+    """Проверка подлинности данных и возвращение данных пользователя"""
     if not init_data:
-        return False
+        return None
     
     try:
         vals = {k: v for k, v in urllib.parse.parse_qsl(init_data)}
         if 'hash' not in vals:
-            return False
+            return None
             
         check_hash = vals.pop('hash')
-        # Сортируем ключи по алфавиту
         data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(vals.items(), key=itemgetter(0)))
         
-        # Секретный ключ - это HMAC-SHA256("WebAppData", BOT_TOKEN)
         secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
-        # Итоговый хеш - это HMAC-SHA256(data_check_string, secret_key)
         h = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
         
-        return h == check_hash
+        if h == check_hash:
+            # Извлекаем данные пользователя
+            user_data = json.loads(vals.get('user', '{}'))
+            return user_data
+        return None
     except Exception as e:
         print(f"⚠️ InitData verification error: {e}")
-        return False
+        return None
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
@@ -359,14 +360,14 @@ async def admin_panel(message: types.Message):
     
 async def get_balance_handler(request):
     init_data = request.headers.get("Authorization")
-    if not verify_init_data(init_data):
+    user_info = verify_init_data(init_data)
+    if not user_info:
         return web.json_response({"error": "unauthorized"}, status=401)
 
-    uid_str = request.query.get("user_id")
-    if not uid_str:
-        return web.json_response({"error": "no user_id"}, status=400)
+    uid = user_info.get("id")
+    if not uid:
+        return web.json_response({"error": "no user_id in initData"}, status=400)
     
-    uid = int(uid_str)
     balance = get_user_balance(uid)
     return web.json_response({"balance": balance})
 
@@ -378,13 +379,16 @@ async def get_state_handler(request):
 
 async def handle_bet(request):
     init_data = request.headers.get("Authorization")
-    if not verify_init_data(init_data):
+    user_info = verify_init_data(init_data)
+    if not user_info:
         return web.json_response({"error": "unauthorized"}, status=401)
 
+    uid = user_info.get("id")
     data = await request.json()
-    uid = int(data.get("user_id"))
     amount = float(data.get("amount"))
-    name = data.get("name", "Unknown")
+    name = user_info.get("username", user_info.get("first_name", "Unknown"))
+    if not name.startswith("@") and user_info.get("username"):
+        name = f"@{name}"
     color = data.get("color")
 
     # ЗАПРЕЩАЕМ СТАВКИ ВО ВРЕМЯ СПИНА
