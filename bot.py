@@ -400,6 +400,7 @@ async def handle_bet(request):
 
         # 1. Вычитаем ставку из БД
         update_user_balance(uid, -amount)
+        new_balance = get_user_balance(uid)
         
         # 2. Обновляем ГЛОБАЛЬНЫЙ список и БАНК
         game_state["total_bank"] = round(game_state["total_bank"] + amount, 2)
@@ -418,7 +419,7 @@ async def handle_bet(request):
                 "color": color or f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
             })
 
-    print(f"💸 [API] СТАВКА: {name} поставил {amount} USDT. Банк: {game_state['total_bank']}")
+    print(f"💸 [API] СТАВКА: {name} на {amount} USDT. Баланс: {new_balance} | Банк: {game_state['total_bank']}")
     return web.json_response({"status": "ok", "new_balance": new_balance})
 
 
