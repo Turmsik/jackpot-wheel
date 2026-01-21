@@ -185,7 +185,8 @@ body {
 }
 
 .bet-input-container input:focus {
-    border-color: #00f2fe;
+    border-color: #fbbf24;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 
 .fee-info {
