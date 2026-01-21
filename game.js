@@ -115,10 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeCanvas() {
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = 300 * dpr;
-        canvas.height = 300 * dpr;
-        ctx.scale(dpr, dpr);
+        const size = canvas.clientWidth; // Берем размер из CSS
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Масштабируем контекст
     }
+
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        updateGameState();
+    });
 
     async function syncGame() {
         try {
@@ -211,7 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawWheel(total) {
-        ctx.clearRect(0, 0, 300, 300);
+        const size = canvas.width / (window.devicePixelRatio || 1);
+        const center = size / 2;
+        const radius = center - 2;
+
+        ctx.clearRect(0, 0, size, size);
         let start = 0;
 
         // 1. Сначала рисуем ГЛОУ (свечение) для каждого сегмента отдельно
@@ -219,54 +229,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const slice = (p.bet / total) * 2 * Math.PI;
             ctx.save();
             ctx.beginPath();
-            ctx.arc(150, 150, 142, start, start + slice);
+            ctx.arc(center, center, radius - 8, start, start + slice);
 
-            // Внешний мощный ореол (ЯРКИЙ НЕОН)
             ctx.shadowBlur = 60;
             ctx.shadowColor = p.color;
             ctx.strokeStyle = p.color;
-            ctx.lineWidth = 10; // Еще толще для яркости
-            ctx.stroke();
-
-            // Внутренний горящий фокус
-            ctx.shadowBlur = 25;
+            ctx.lineWidth = 10;
             ctx.stroke();
 
             ctx.restore();
             start += slice;
         });
 
-        // 2. Затем рисуем сами сегменты поверх, чтобы перекрыть внутренние тени
+        // 2. Затем рисуем сами сегменты поверх
         start = 0;
         players.forEach(p => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
             ctx.save();
             ctx.beginPath();
-            ctx.moveTo(150, 150);
-            ctx.arc(150, 150, 148, start, start + slice);
+            ctx.moveTo(center, center);
+            ctx.arc(center, center, radius, start, start + slice);
             ctx.closePath();
 
             ctx.fillStyle = p.color;
             ctx.fill();
 
-            // ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ
+            // ТЁМНЫЕ РАЗДЕЛИТЕЛИ
             ctx.strokeStyle = '#0a0a0f';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(150, 150);
-            ctx.lineTo(150 + 148 * Math.cos(start), 150 + 148 * Math.sin(start));
+            ctx.moveTo(center, center);
+            ctx.lineTo(center + radius * Math.cos(start), center + radius * Math.sin(start));
             ctx.stroke();
 
             ctx.restore();
             start += slice;
         });
 
-        // ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
+        // ОБЩИЙ БЛЕСК СВЕРХУ
         ctx.save();
         ctx.beginPath();
-        ctx.arc(150, 150, 148, 0, Math.PI * 2);
-        const shine = ctx.createRadialGradient(150, 50, 10, 150, 150, 250);
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        const shine = ctx.createRadialGradient(center, center - radius / 3, radius / 20, center, center, radius * 1.5);
         shine.addColorStop(0, "rgba(255, 255, 255, 0.2)");
         shine.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = shine;
@@ -291,9 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawEmptyWheel() {
-        ctx.clearRect(0, 0, 300, 300);
+        const size = canvas.width / (window.devicePixelRatio || 1);
+        const center = size / 2;
+        const radius = center - 2;
+
+        ctx.clearRect(0, 0, size, size);
         ctx.beginPath();
-        ctx.arc(150, 150, 148, 0, Math.PI * 2);
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
         ctx.fillStyle = '#13141a';
         ctx.fill();
 
@@ -345,21 +354,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     betBtn.addEventListener('click', async () => {
-        if (isSpinning) return;
+        if (isSpinning || betBtn.disabled) return;
+
         const val = parseFloat(betInput.value);
         if (val >= 0.1 && val <= myBalance) {
-            // Сначала уведомляем бота о ставке, чтобы он вычел из БД
-            const myColor = getNextNeonColor(); // Берем свой неон
+            // БЛОКИРУЕМ КНОПКУ
+            betBtn.disabled = true;
+            betBtn.style.opacity = "0.5";
+            const originalText = betBtn.textContent;
+            betBtn.textContent = "ОЖИДАНИЕ...";
+
+            const myColor = getNextNeonColor();
             const ok = await notifyBotOfBet(uParam, val, myUsername, myColor);
+
             if (!ok) {
                 window.Telegram.WebApp.showAlert("❌ Ошибка связи с ботом. Ставка не принята.");
+                betBtn.disabled = false;
+                betBtn.style.opacity = "1";
+                betBtn.textContent = originalText;
                 return;
             }
 
+            // УСПЕХ
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
             myBalance -= val;
             updateBalanceUI();
             betInput.value = '';
-            // Локально не добавляем, ждем синхронизации syncGame()
+
+            // Кнопка разблокируется сама в цикле syncGame когда придет статус от сервера
+            // Но на случай ошибки сети разблокируем через 3 сек
+            setTimeout(() => {
+                if (!isSpinning) {
+                    betBtn.disabled = false;
+                    betBtn.style.opacity = "1";
+                    betBtn.textContent = "В ИГРУ";
+                }
+            }, 3000);
         }
     });
 
