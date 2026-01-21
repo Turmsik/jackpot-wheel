@@ -132,8 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${BOT_API_URL}/api/state`);
             const state = await res.json();
 
-            // 1. Синхронизируем список игроков
-            players = state.players;
+            // 1. Синхронизируем список игроков (ТОЛЬКО если не смотрим результат)
+            if (!isShowingResult) {
+                players = state.players;
+            }
 
             // 2. Умная синхронизация таймера
             // Если разрыв с сервером большой (>2 сек) или таймер не запущен - верим серверу
@@ -157,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     startSpinProcess(state.last_winner, elapsed);
                 }
             } else if (state.status === 'waiting' && isSpinning && !isShowingResult) {
-                // Сбрасываем только если уже НЕ показываем победителя и сервер готов
+                // Если сервер уже сбросился, а мы закончили спин - сбрасываемся
                 resetGame();
             }
 
@@ -476,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `
             <div style="font-size: ${nameSize}; color: #fff; font-weight: 700; line-height: 1.1; margin-bottom: 2px;">${winner.name}</div>
-            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">+${payout.toFixed(2)}</div>
+            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">+$${payout.toFixed(2)} USDT</div>
         `;
 
         if (winner.name === myUsername) {
@@ -484,11 +486,12 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => syncBalance(), 1000);
         }
 
-        // Ровно через 3.5 секунды разрешаем сброс
+        // РОВНО ЧЕРЕЗ 3 СЕКУНДЫ ОЧИЩАЕМ ВСЁ И ГОТОВИМ К НОВОМУ РАУНДУ
         setTimeout(() => {
             isShowingResult = false;
-            // resetGame() вызовется сам в следующем цикле syncGame
-        }, 3500);
+            isSpinning = false;
+            resetGame();
+        }, 3000);
     }
 
     function resetGame() {
@@ -497,15 +500,13 @@ document.addEventListener('DOMContentLoaded', () => {
         colorIndex = Math.floor(Math.random() * 360); // РАНДОМНЫЙ ЦВЕТ ДЛЯ ВСЕХ В НОВОМ РАУНДЕ
         roundTime = 120; // ВОЗВРАЩАЕМ 2 МИНУТЫ
         isSpinning = false;
-        timerStarted = false;
-        timerDisplay.textContent = "--:--";
-        timerDisplay.style.color = "#FF0000";
         timerDisplay.style.fontSize = ""; // Возвращаем компактный размер из CSS
 
         // СБРОС ЦЕНТРАЛЬНОГО ТАБЛО
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `$ <span id="pot-amount">0.00</span>`;
         potDisplay = document.getElementById('pot-amount'); // Переподключаем элемент
+        potDisplay.textContent = "0.00";
 
         wheelWrapper.style.transition = "none";
         wheelWrapper.style.transform = "rotate(-90deg)";

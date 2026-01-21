@@ -136,8 +136,8 @@ async def game_loop():
     print("⚙️ Game Loop Started")
     while True:
         if game_state["status"] == "waiting":
-            # Таймер идет ТОЛЬКО если есть хотя бы 2 игрока (или 1 игрок и боты)
-            if len(game_state["players"]) >= 2:
+            # Таймер идет ТОЛЬКО если есть хотя бы 1 игрок
+            if len(game_state["players"]) >= 1:
                 # Если раунд только начался (таймер был 120), ставим метку окончания
                 if game_state["round_end_ms"] == 0:
                     game_state["round_end_ms"] = int((time.time() + game_state["round_time"]) * 1000)
@@ -400,10 +400,10 @@ async def handle_bet(request):
 
         # 1. Вычитаем ставку из БД
         update_user_balance(uid, -amount)
-        new_balance = get_user_balance(uid)
         
-        # 2. Добавляем в ГЛОБАЛЬНЫЙ список игроков
-        # Проверяем, есть ли уже такой игрок
+        # 2. Обновляем ГЛОБАЛЬНЫЙ список и БАНК
+        game_state["total_bank"] = round(game_state["total_bank"] + amount, 2)
+        
         found = False
         for p in game_state["players"]:
             if p["name"] == name:
@@ -412,13 +412,13 @@ async def handle_bet(request):
                 break
         if not found:
             game_state["players"].append({
-                "user_id": uid, # Сохраняем ID для выплаты на сервере
+                "user_id": uid, 
                 "name": name,
                 "bet": round(amount, 2),
                 "color": color or f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
             })
 
-    print(f"💸 [API] СТАВКА: {name} поставил {amount} USDT. Остаток: {new_balance}")
+    print(f"💸 [API] СТАВКА: {name} поставил {amount} USDT. Банк: {game_state['total_bank']}")
     return web.json_response({"status": "ok", "new_balance": new_balance})
 
 
