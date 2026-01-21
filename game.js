@@ -158,10 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     startSpinProcess(state.last_winner, elapsed);
                 }
-            } else if (state.status === 'waiting' && isSpinning && !isShowingResult) {
-                // Если сервер уже сбросился, а мы закончили спин - сбрасываемся
-                resetGame();
             }
+            // УБРАЛИ ПРЕЖДЕВРЕМЕННЫЙ resetGame() отсюда, так как он мешал анимации
 
             // Обновляем UI только если не крутим прямо сейчас
             if (!isSpinning) {
@@ -478,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `
             <div style="font-size: ${nameSize}; color: #fff; font-weight: 700; line-height: 1.1; margin-bottom: 2px;">${winner.name}</div>
-            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">+$${payout.toFixed(2)} USDT</div>
+            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">+ $${payout.toFixed(2)} USDT</div>
         `;
 
         if (winner.name === myUsername) {

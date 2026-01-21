@@ -136,8 +136,8 @@ async def game_loop():
     print("⚙️ Game Loop Started")
     while True:
         if game_state["status"] == "waiting":
-            # Таймер идет ТОЛЬКО если есть хотя бы 1 игрок
-            if len(game_state["players"]) >= 1:
+            # Таймер идет ТОЛЬКО если есть хотя бы 2 игрока
+            if len(game_state["players"]) >= 2:
                 # Если раунд только начался (таймер был 120), ставим метку окончания
                 if game_state["round_end_ms"] == 0:
                     game_state["round_end_ms"] = int((time.time() + game_state["round_time"]) * 1000)
