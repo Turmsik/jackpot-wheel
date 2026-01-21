@@ -84,8 +84,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         console.log("Attempting to sync with Bot API:", BOT_API_URL);
         try {
-            const API_URL = `${BOT_API_URL}/api/balance?user_id=${uParam}`;
-            const res = await fetch(API_URL);
+            const API_URL = `${BOT_API_URL}/api/balance`;
+            const res = await fetch(API_URL, {
+                headers: {
+                    "Telegram-Auth": window.Telegram.WebApp.initData
+                }
+            });
             if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             if (data.balance !== undefined) {
@@ -129,8 +133,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Синхронизируем статус раунда
             if (state.status === 'spinning' && !isSpinning) {
-                // Сервер сказал крутить!
-                startSpinProcess(state.last_winner);
+                // Сервер сказал крутить! 
+                // Вычисляем, сколько времени уже прошло с начала спина на сервере
+                let elapsed = 0;
+                if (state.spin_start_ms) {
+                    elapsed = Date.now() - state.spin_start_ms;
+                }
+
+                // Если прошло больше 6.5 секунд, значит спин уже почти кончился, рисуем итог
+                if (elapsed > 6500) {
+                    showFinalResult(state.last_winner);
+                } else {
+                    startSpinProcess(state.last_winner, elapsed);
+                }
             } else if (state.status === 'waiting' && isSpinning) {
                 // Раунд закончился на сервере, сбрасываем локально
                 resetGame();
@@ -358,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    function startSpinProcess(serverWinner) {
+    function startSpinProcess(serverWinner, alreadyElapsedMs = 0) {
         if (isSpinning) return;
         isSpinning = true;
 
@@ -385,44 +400,56 @@ document.addEventListener('DOMContentLoaded', () => {
         const winCenter = (wStart + wEnd) / 2;
         const targetRotation = (360 * 10) + (360 - winCenter);
 
+        // ВЫЧИСЛЯЕМ ОСТАТОЧНОЕ ВРЕМЯ АНИМАЦИИ (стандарт 6с)
+        let remainDuration = 6000 - alreadyElapsedMs;
+        if (remainDuration < 0) remainDuration = 0;
+
         wheelWrapper.style.transition = "none";
-        wheelWrapper.style.transform = "rotate(-90deg)";
+        // Если мы зашли посреди спина, нужно сразу повернуть на начальный угол по времени
+        if (alreadyElapsedMs > 0) {
+            // Линейная аппроксимация для упрощения (в идеале нужно учитывать кубическую кривую)
+            const progress = alreadyElapsedMs / 6000;
+            const currentRot = targetRotation * progress;
+            wheelWrapper.style.transform = `rotate(${currentRot - 90}deg)`;
+        } else {
+            wheelWrapper.style.transform = "rotate(-90deg)";
+        }
 
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                wheelWrapper.style.transition = "transform 6s cubic-bezier(0.1, 0, 0.1, 1)";
+                wheelWrapper.style.transition = `transform ${remainDuration / 1000}s cubic-bezier(0.1, 0, 0.1, 1)`;
                 wheelWrapper.style.transform = `rotate(${targetRotation - 90}deg)`;
             });
         });
 
         setTimeout(async () => {
-            const netWin = (total - winner.bet) * 0.90; // НАЛОГ 10% (было 5%)
-            const fee = (total - winner.bet) * 0.10;
-            const payout = winner.bet + netWin;
+            showFinalResult(winner);
+        }, remainDuration + 500);
+    }
 
-            // В центре пишем кто победил
-            timerDisplay.textContent = "Winner!";
-            timerDisplay.style.fontSize = "20px";
-            timerDisplay.style.color = "#FF0000"; // ВСЕГДА КРАСНЫЙ
+    function showFinalResult(winner) {
+        if (!winner) return;
+        const total = players.reduce((s, p) => s + p.bet, 0);
+        const netWin = (total - winner.bet) * 0.90;
+        const payout = winner.bet + netWin;
 
-            // Показываем имя И сумму выигрыша (многострочно)
-            const fontSize = winner.name.length > 12 ? "12px" : "15px";
-            const potContainer = document.getElementById('pot-total-container');
-            potContainer.innerHTML = `
-                <div style="font-size: ${fontSize}; color: #fff; font-weight: 700; line-height: 1.1;">${winner.name}</div>
-                <div style="font-size: 14px; color: #00FF00; font-weight: 800; margin-top: 2px;">+${payout.toFixed(2)} USDT</div>
-            `;
+        timerDisplay.textContent = "Winner!";
+        timerDisplay.style.fontSize = "20px";
+        timerDisplay.style.color = "#FF0000";
 
-            // Уведомление ТОЛЬКО если выиграл я
-            if (winner.name === myUsername) {
-                window.Telegram.WebApp.showAlert(`🚀 ПОБЕДА! Вы выиграли ${payout.toFixed(2)} USDT`);
-                // Синхронизируем баланс с сервером ПОСЛЕ выигрыша
-                setTimeout(() => syncBalance(), 1000);
-            }
+        const fontSize = winner.name.length > 12 ? "12px" : "15px";
+        const potContainer = document.getElementById('pot-total-container');
+        potContainer.innerHTML = `
+            <div style="font-size: ${fontSize}; color: #fff; font-weight: 700; line-height: 1.1;">${winner.name}</div>
+            <div style="font-size: 14px; color: #00FF00; font-weight: 800; margin-top: 2px;">+${payout.toFixed(2)} USDT</div>
+        `;
 
-            // Ровно через 3 секунды сбрасываем раунд для новой игры
-            setTimeout(() => resetGame(), 3000);
-        }, 6500);
+        if (winner.name === myUsername) {
+            window.Telegram.WebApp.showAlert(`🚀 ПОБЕДА! Вы выиграли ${payout.toFixed(2)} USDT`);
+            setTimeout(() => syncBalance(), 1000);
+        }
+
+        setTimeout(() => resetGame(), 3000);
     }
 
     function resetGame() {
@@ -452,11 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const API_URL = `${BOT_API_URL}/api/bet`;
             const res = await fetch(API_URL, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Telegram-Auth": window.Telegram.WebApp.initData
+                },
                 body: JSON.stringify({
-                    user_id: userId,
                     amount: amount,
-                    name: name,
                     color: color
                 })
             });

@@ -10,6 +10,10 @@ from aiohttp import web
 import aiohttp_cors
 import json
 import random
+import time
+import hashlib
+import hmac
+from urllib.parse import parse_qs
 
 # ---------------------------------------------
 # НАСТРОЙКИ
@@ -54,9 +58,33 @@ def update_user_balance(user_id, amount, username=None):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO users (user_id, username, balance) VALUES (?, ?, 0.0)', (user_id, username))
-    cursor.execute('UPDATE users SET balance = balance + ?, username = ? WHERE user_id = ?', (amount, username, user_id))
+    # Округляем до 2 знаков для точности
+    cursor.execute('UPDATE users SET balance = ROUND(balance + ?, 2), username = ? WHERE user_id = ?', (amount, username, user_id))
     conn.commit()
     conn.close()
+
+# ---------------------------------------------
+# БЕЗОПАСНОСТЬ (Проверка данных Telegram)
+# ---------------------------------------------
+def verify_telegram_auth(init_data: str):
+    """Проверяет подпись данных от Telegram WebApp"""
+    try:
+        if not init_data: return None
+        
+        vals = {k: v[0] for k, v in parse_qs(init_data).items()}
+        hash_val = vals.pop('hash', None)
+        if not hash_val: return None
+        
+        data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(vals.items())])
+        
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+        
+        if calculated_hash == hash_val:
+            return json.loads(vals.get('user', '{}'))
+        return None
+    except:
+        return None
 
 # ---------------------------------------------
 # БОТ И ГЛОБАЛЬНОЕ СОСТОЯНИЕ ИГРЫ
@@ -71,8 +99,12 @@ game_state = {
     "players": [],       # [{name, bet, color}, ...]
     "status": "waiting", # waiting, spinning
     "last_winner": None,
-    "total_bank": 0.0
+    "total_bank": 0.0,
+    "spin_start_ms": 0   # Для синхронизации анимации
 }
+
+# Блокировка для предотвращения Race Condition при ставках
+bet_lock = asyncio.Lock()
 
 def reset_global_game():
     game_state["round_time"] = 120
@@ -80,6 +112,7 @@ def reset_global_game():
     game_state["status"] = "waiting"
     game_state["last_winner"] = None
     game_state["total_bank"] = 0.0
+    game_state["spin_start_ms"] = 0
     print("♻️ GLOBAL GAME RESET")
 
 def calculate_winner():
@@ -108,6 +141,7 @@ async def game_loop():
                 else:
                     # ВРЕМЯ ВЫШЛО -> КРУТИМ
                     game_state["status"] = "spinning"
+                    game_state["spin_start_ms"] = int(time.time() * 1000)
                     winner = calculate_winner()
                     game_state["last_winner"] = winner
                     
@@ -312,13 +346,15 @@ async def admin_panel(message: types.Message):
     conn.close()
     
 async def get_balance_handler(request):
-    uid_str = request.query.get("user_id")
-    if not uid_str:
-        return web.json_response({"error": "no user_id"}, status=400)
+    auth_data = request.headers.get("Telegram-Auth")
+    user_data = verify_telegram_auth(auth_data)
     
-    uid = int(uid_str)
+    if not user_data:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    
+    uid = user_data.get("id")
     balance = get_user_balance(uid)
-    print(f"📡 [API] Запрос баланса: User {uid} -> {balance} USDT")
+    print(f"📡 [API] Запрос баланса (защищен): User {uid} -> {balance} USDT")
     return web.json_response({"balance": balance})
 
 async def get_state_handler(request):
@@ -328,80 +364,55 @@ async def get_state_handler(request):
     return web.json_response(game_state)
 
 async def handle_bet(request):
+    auth_data = request.headers.get("Telegram-Auth")
+    user_data = verify_telegram_auth(auth_data)
+    
+    if not user_data:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    
+    uid = user_data.get("id")
     data = await request.json()
-    uid = int(data.get("user_id"))
     amount = float(data.get("amount"))
-    name = data.get("name", "Unknown")
+    # Имя берем прямо из проверенных данных Telegram
+    name = user_data.get("username") or user_data.get("first_name", "Unknown")
+    if user_data.get("username"): name = f"@{name}"
+    
     color = data.get("color")
 
     # ЗАПРЕЩАЕМ СТАВКИ ВО ВРЕМЯ СПИНА
     if game_state["status"] == "spinning":
         return web.json_response({"error": "round_is_spinning"}, status=400)
 
-    # 1. Вычитаем ставку из БД
-    update_user_balance(uid, -amount)
-    new_balance = get_user_balance(uid)
-    
-    # 2. Добавляем в ГЛОБАЛЬНЫЙ список игроков
-    # Проверяем, есть ли уже такой игрок
-    found = False
-    for p in game_state["players"]:
-        if p["name"] == name:
-            p["bet"] += amount
-            found = True
-            break
-    if not found:
-        game_state["players"].append({
-            "user_id": uid, # Сохраняем ID для выплаты на сервере
-            "name": name,
-            "bet": amount,
-            "color": color or f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
-        })
+    # СИНХРОНИЗИРУЕМ ПОТОКИ (Race Condition Protection)
+    async with bet_lock:
+        # ПРОВЕРЯЕМ БАЛАНС ПЕРЕД СПИСАНИЕМ
+        user_balance = get_user_balance(uid)
+        if user_balance < amount:
+            return web.json_response({"error": "insufficient_funds"}, status=400)
+
+        # 1. Вычитаем ставку из БД
+        update_user_balance(uid, -amount)
+        new_balance = get_user_balance(uid)
+        
+        # 2. Добавляем в ГЛОБАЛЬНЫЙ список игроков
+        # Проверяем, есть ли уже такой игрок
+        found = False
+        for p in game_state["players"]:
+            if p["name"] == name:
+                p["bet"] = round(p["bet"] + amount, 2)
+                found = True
+                break
+        if not found:
+            game_state["players"].append({
+                "user_id": uid, # Сохраняем ID для выплаты на сервере
+                "name": name,
+                "bet": round(amount, 2),
+                "color": color or f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
+            })
 
     print(f"💸 [API] СТАВКА: {name} поставил {amount} USDT. Остаток: {new_balance}")
     return web.json_response({"status": "ok", "new_balance": new_balance})
 
-async def handle_win(request):
-    data = await request.json()
-    uid = int(data.get("user_id"))
-    win_amount = float(data.get("amount"))
-    profit_fee = float(data.get("fee", 0)) 
-
-    print(f"🏆 [API] ВЫИГРЫШ: User {uid} получил +{win_amount} USDT (Комиссия: {profit_fee})")
-    
-    # 1. Обновляем баланс игрока в БД
-    update_user_balance(uid, win_amount)
-    
-    # 2. Обновляем прибыль админа в БД
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('UPDATE stats SET value = value + ? WHERE key = "admin_profit"', (profit_fee,))
-    conn.commit()
-    conn.close()
-
-    # 3. Отправляем уведомление в Telegram
-    new_balance = get_user_balance(uid)
-    try:
-        await bot.send_message(
-            uid, 
-            f"🎰 <b>ПОБЕДА В КОЛЕСЕ!</b>\n\n"
-            f"💰 Выигрыш: <b>+{win_amount:.2f} USDT</b>\n"
-            f"� Ваш баланс: <b>{new_balance:.2f} USDT</b>\n\n"
-            f"<i>Удачи в следующих раундах!</i>",
-            parse_mode="HTML"
-        )
-    except Exception as e:
-        logging.error(f"Failed to send win message to {uid}: {e}")
-
-    return web.json_response({"status": "ok", "new_balance": new_balance})
-
-async def get_balance_handler(request):
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no user_id"}, status=400)
-    
-    balance = get_user_balance(int(uid))
-    return web.json_response({"balance": balance})
 
 async def run_api():
     app = web.Application()
@@ -415,9 +426,6 @@ async def run_api():
     })
     
     # Регистрация маршрутов
-    win_res = app.router.add_resource("/api/win")
-    cors.add(win_res.add_route("POST", handle_win))
-    
     bal_res = app.router.add_resource("/api/balance")
     cors.add(bal_res.add_route("GET", get_balance_handler))
 
