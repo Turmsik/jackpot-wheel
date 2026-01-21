@@ -122,31 +122,34 @@ async def game_loop():
                             profit_fee = (total_bank - winner["bet"]) * 0.10
                             payout = winner["bet"] + net_win
                             
-                            # 1. Зачисляем в БД (сразу, чтобы баланс был верным при рефреше)
-                            update_user_balance(uid, payout)
-                            
-                            # 2. Обновляем профит админа
-                            conn = sqlite3.connect('database.db')
-                            cursor = conn.cursor()
-                            cursor.execute('UPDATE stats SET value = value + ? WHERE key = "admin_profit"', (profit_fee,))
-                            conn.commit()
-                            conn.close()
-                            
-                            # 3. Шлем уведомление С ЗАДЕРЖКОЙ (чтобы не спойлерить анимацию)
-                            async def delayed_notify(user_id, amount, balance):
-                                await asyncio.sleep(7) # Ждем пока колесо докрутится
+                            # Теперь всё (БД и Телеграм) делаем С ЗАДЕРЖКОЙ, чтобы не спойлерить результат
+                            async def delayed_payout_process(user_id, amount, fee):
+                                await asyncio.sleep(8) # Ждем пока колесо докрутится (6с анимация + запас)
+                                
+                                # 1. Зачисляем в БД
+                                update_user_balance(user_id, amount)
+                                
+                                # 2. Обновляем профит админа
+                                conn = sqlite3.connect('database.db')
+                                cursor = conn.cursor()
+                                cursor.execute('UPDATE stats SET value = value + ? WHERE key = "admin_profit"', (fee,))
+                                conn.commit()
+                                conn.close()
+                                
+                                # 3. Шлем уведомление
+                                new_bal = get_user_balance(user_id)
                                 try:
                                     await bot.send_message(
                                         user_id,
                                         f"🎰 <b>ПОБЕДА В КОЛЕСЕ!</b>\n\n"
                                         f"💰 Выигрыш: <b>+{amount:.2f} USDT</b>\n"
-                                        f"💳 Ваш баланс: <b>{balance:.2f} USDT</b>\n\n"
-                                        f"<i>Раунд завершен успешно!</i>",
+                                        f"💳 Ваш баланс: <b>{new_bal:.2f} USDT</b>\n\n"
+                                        f"<i>Результат зачислен! Удачи!</i>",
                                         parse_mode="HTML"
                                     )
                                 except: pass
                             
-                            asyncio.create_task(delayed_notify(uid, payout, get_user_balance(uid)))
+                            asyncio.create_task(delayed_payout_process(uid, payout, profit_fee))
                     
                     # Ждем 10 секунд (время анимации + показ результата)
                     await asyncio.sleep(10)

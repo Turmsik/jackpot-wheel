@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 betBtn.disabled = false;
                 betBtn.style.opacity = "1";
-                betBtn.textContent = "ПОСТАВИТЬ";
+                betBtn.textContent = "В ИГРУ";
             }
 
         } catch (e) {
