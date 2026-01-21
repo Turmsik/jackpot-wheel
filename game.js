@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let roundTime = 120;
     let isSpinning = false;
-    let isProcessingBet = false; // БЛОКИРОВКА СПАМА СТАВОК
     let syncInterval = null;
 
     const botNames = [
@@ -76,12 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Запуск ПЕРМАНЕНТНОЙ синхронизации раундов
         startSyncLoop();
-
-        // ОБРАБОТКА РЕФРЕША ПРИ ИЗМЕНЕНИИ РАЗМЕРА ОКНА (Важно для ПК!)
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-            updateGameState(); // Перерисовываем колесо
-        });
     }
 
     async function syncBalance() {
@@ -352,35 +345,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     betBtn.addEventListener('click', async () => {
-        if (isSpinning || isProcessingBet) return;
-
+        if (isSpinning) return;
         const val = parseFloat(betInput.value);
         if (val >= 0.1 && val <= myBalance) {
-            isProcessingBet = true;
-            betBtn.disabled = true;
-            betBtn.textContent = "ЖДЕМ...";
-            betBtn.style.opacity = "0.7";
-
             // Сначала уведомляем бота о ставке, чтобы он вычел из БД
             const myColor = getNextNeonColor(); // Берем свой неон
             const ok = await notifyBotOfBet(uParam, val, myUsername, myColor);
-
             if (!ok) {
                 window.Telegram.WebApp.showAlert("❌ Ошибка связи с ботом. Ставка не принята.");
-                isProcessingBet = false;
-                betBtn.disabled = false;
-                betBtn.textContent = "В ИГРУ";
-                betBtn.style.opacity = "1";
                 return;
             }
 
             myBalance -= val;
             updateBalanceUI();
             betInput.value = '';
-
-            // Разблокируем только после успешной обработки
-            isProcessingBet = false;
-            // Текст и статус кнопки восстановятся сами в syncGame() через секунду
+            // Локально не добавляем, ждем синхронизации syncGame()
         }
     });
 

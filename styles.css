@@ -119,8 +119,8 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 46%;
-    height: 46%;
+    width: 140px;
+    height: 140px;
     background: #0d0e12;
     border-radius: 50%;
     display: flex;
@@ -133,7 +133,7 @@ body {
 }
 
 .timer {
-    font-size: clamp(18px, 8.5vmin, 26px);
+    font-size: 26px;
     font-weight: 800;
     color: #FF0000;
     text-shadow: 0 0 10px #FF0000, 0 0 20px rgba(255, 0, 0, 0.5);
