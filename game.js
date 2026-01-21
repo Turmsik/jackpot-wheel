@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let roundTime = 120;
     let isSpinning = false;
+    let isShowingResult = false; // Флаг, чтобы не сбрасывать пока смотрим победителя
     let syncInterval = null;
 
     const botNames = [
@@ -134,11 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. Синхронизируем список игроков
             players = state.players;
 
-            // 2. Синхронизируем таймер через точную метку времени
-            if (state.round_end_ms) {
-                const remaining = Math.max(0, Math.floor((state.round_end_ms - Date.now()) / 1000));
-                roundTime = remaining;
-            } else {
+            // 2. Умная синхронизация таймера
+            // Если разрыв с сервером большой (>2 сек) или таймер не запущен - верим серверу
+            if (Math.abs(roundTime - state.round_time) > 2 || roundTime === 0) {
                 roundTime = state.round_time;
             }
 
@@ -157,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     startSpinProcess(state.last_winner, elapsed);
                 }
-            } else if (state.status === 'waiting' && isSpinning && timerDisplay.textContent !== "Winner!") {
-                // Сбрасываем только если уже НЕ показываем победителя
+            } else if (state.status === 'waiting' && isSpinning && !isShowingResult) {
+                // Сбрасываем только если уже НЕ показываем победителя и сервер готов
                 resetGame();
             }
 
@@ -175,12 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncBalance();
             }
 
-            // Блокируем кнопку ставки во время спина
-            if (state.status === 'spinning' || isSpinning) {
+            // Блокируем кнопку ставки во время спина и показа результата
+            if (state.status === 'spinning' || isSpinning || isShowingResult) {
                 betBtn.disabled = true;
                 betBtn.style.opacity = "0.5";
                 betBtn.textContent = "ROLLING...";
-            } else {
+            } else if (betBtn.textContent !== "ОЖИДАНИЕ...") {
                 betBtn.disabled = false;
                 betBtn.style.opacity = "1";
                 betBtn.textContent = "В ИГРУ";
@@ -440,9 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remainDuration < 0) remainDuration = 0;
 
         wheelWrapper.style.transition = "none";
-        // Если мы зашли посреди спина, нужно сразу повернуть на начальный угол по времени
         if (alreadyElapsedMs > 0) {
-            // Линейная аппроксимация для упрощения 
             const progress = alreadyElapsedMs / 6000;
             const currentRot = targetRotation * progress;
             wheelWrapper.style.transform = `rotate(${currentRot - 90}deg)`;
@@ -450,16 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
             wheelWrapper.style.transform = "rotate(-90deg)";
         }
 
-        // ВАЖНО: Форсируем перерисовку (Layout Flush), чтобы transition: none успел примениться
-        // Это фиксит баг на ПК, когда колесо "забывает" крутиться
-        void wheelWrapper.offsetHeight;
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                wheelWrapper.style.transition = `transform ${remainDuration / 1000}s cubic-bezier(0.1, 0, 0.1, 1)`;
-                wheelWrapper.style.transform = `rotate(${targetRotation - 90}deg)`;
-            });
-        });
+        // ВАЖНО: Используем setTimeout вместо requestAnimationFrame для гарантированного срабатывания на ПК
+        setTimeout(() => {
+            wheelWrapper.style.transition = `transform ${remainDuration / 1000}s cubic-bezier(0.1, 0, 0.1, 1)`;
+            wheelWrapper.style.transform = `rotate(${targetRotation - 90}deg)`;
+        }, 50);
 
         setTimeout(async () => {
             showFinalResult(winner);
@@ -467,14 +459,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showFinalResult(winner) {
-        if (!winner) return;
+        if (!winner || isShowingResult) return;
+        isShowingResult = true;
+
         const total = players.reduce((s, p) => s + p.bet, 0);
         const netWin = (total - winner.bet) * 0.90;
         const payout = winner.bet + netWin;
 
         timerDisplay.textContent = "Winner!";
         timerDisplay.style.fontSize = "clamp(14px, 5vw, 22px)";
-        timerDisplay.style.color = "#FF0000";
+        timerDisplay.style.color = "#00FF00"; // Розовый/Зеленый или Красный? Пусть будет зеленый для триумфа
 
         const nameSize = winner.name.length > 12 ? "clamp(10px, 3.5vw, 14px)" : "clamp(12px, 4vw, 18px)";
         const winSize = "clamp(14px, 4.5vw, 20px)";
@@ -490,10 +484,15 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => syncBalance(), 1000);
         }
 
-        setTimeout(() => resetGame(), 3000);
+        // Ровно через 3.5 секунды разрешаем сброс
+        setTimeout(() => {
+            isShowingResult = false;
+            // resetGame() вызовется сам в следующем цикле syncGame
+        }, 3500);
     }
 
     function resetGame() {
+        if (isShowingResult) return; // Страховка
         players = [];
         colorIndex = Math.floor(Math.random() * 360); // РАНДОМНЫЙ ЦВЕТ ДЛЯ ВСЕХ В НОВОМ РАУНДЕ
         roundTime = 120; // ВОЗВРАЩАЕМ 2 МИНУТЫ
@@ -535,6 +534,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
     }
+
+    // Локальный отсчет таймера (каждую секунду), чтобы он не "замирал"
+    setInterval(() => {
+        if (!isSpinning && !isShowingResult && roundTime > 0) {
+            roundTime--;
+            const mins = Math.floor(roundTime / 60);
+            const secs = roundTime % 60;
+            timerDisplay.textContent = `${mins}:${secs < 10 ? '0' + secs : secs}`;
+        }
+    }, 1000);
 
     init();
 });
