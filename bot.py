@@ -100,8 +100,7 @@ game_state = {
     "status": "waiting", # waiting, spinning
     "last_winner": None,
     "total_bank": 0.0,
-    "spin_start_ms": 0,
-    "round_end_ms": 0    # Точное время окончания раунда
+    "spin_start_ms": 0   # Для синхронизации анимации
 }
 
 # Блокировка для предотвращения Race Condition при ставках
@@ -114,7 +113,6 @@ def reset_global_game():
     game_state["last_winner"] = None
     game_state["total_bank"] = 0.0
     game_state["spin_start_ms"] = 0
-    game_state["round_end_ms"] = 0
     print("♻️ GLOBAL GAME RESET")
 
 def calculate_winner():
@@ -136,17 +134,11 @@ async def game_loop():
     print("⚙️ Game Loop Started")
     while True:
         if game_state["status"] == "waiting":
-            # Таймер идет ТОЛЬКО если есть хотя бы 2 игрока
+            # Таймер идет ТОЛЬКО если есть хотя бы 2 игрока (или 1 игрок и боты)
             if len(game_state["players"]) >= 2:
-                # Если раунд только начался (таймер был 120), ставим метку окончания
-                if game_state["round_end_ms"] == 0:
-                    game_state["round_end_ms"] = int((time.time() + game_state["round_time"]) * 1000)
-
-                # Каждую секунду обновляем round_time для обратной совместимости
-                remaining = int((game_state["round_end_ms"] / 1000) - time.time())
-                game_state["round_time"] = max(0, remaining)
-
-                if game_state["round_time"] <= 0:
+                if game_state["round_time"] > 0:
+                    game_state["round_time"] -= 1
+                else:
                     # ВРЕМЯ ВЫШЛО -> КРУТИМ
                     game_state["status"] = "spinning"
                     game_state["spin_start_ms"] = int(time.time() * 1000)
@@ -402,9 +394,8 @@ async def handle_bet(request):
         update_user_balance(uid, -amount)
         new_balance = get_user_balance(uid)
         
-        # 2. Обновляем ГЛОБАЛЬНЫЙ список и БАНК
-        game_state["total_bank"] = round(game_state["total_bank"] + amount, 2)
-        
+        # 2. Добавляем в ГЛОБАЛЬНЫЙ список игроков
+        # Проверяем, есть ли уже такой игрок
         found = False
         for p in game_state["players"]:
             if p["name"] == name:
@@ -413,13 +404,13 @@ async def handle_bet(request):
                 break
         if not found:
             game_state["players"].append({
-                "user_id": uid, 
+                "user_id": uid, # Сохраняем ID для выплаты на сервере
                 "name": name,
                 "bet": round(amount, 2),
                 "color": color or f"hsl({(len(game_state['players']) * 137) % 360}, 100%, 50%)"
             })
 
-    print(f"💸 [API] СТАВКА: {name} на {amount} USDT. Баланс: {new_balance} | Банк: {game_state['total_bank']}")
+    print(f"💸 [API] СТАВКА: {name} поставил {amount} USDT. Остаток: {new_balance}")
     return web.json_response({"status": "ok", "new_balance": new_balance})
 
 

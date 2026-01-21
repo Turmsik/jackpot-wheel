@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let roundTime = 120;
     let isSpinning = false;
-    let isShowingResult = false; // Флаг, чтобы не сбрасывать пока смотрим победителя
+    let isProcessingBet = false; // БЛОКИРОВКА СПАМА СТАВОК
     let syncInterval = null;
 
     const botNames = [
@@ -76,6 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Запуск ПЕРМАНЕНТНОЙ синхронизации раундов
         startSyncLoop();
+
+        // ОБРАБОТКА РЕФРЕША ПРИ ИЗМЕНЕНИИ РАЗМЕРА ОКНА (Важно для ПК!)
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            updateGameState(); // Перерисовываем колесо
+        });
     }
 
     async function syncBalance() {
@@ -116,32 +122,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resizeCanvas() {
         const dpr = window.devicePixelRatio || 1;
-        const size = canvas.clientWidth; // Берем размер из CSS
-        canvas.width = size * dpr;
-        canvas.height = size * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Масштабируем контекст
+        canvas.width = 300 * dpr;
+        canvas.height = 300 * dpr;
+        ctx.scale(dpr, dpr);
     }
-
-    window.addEventListener('resize', () => {
-        resizeCanvas();
-        updateGameState();
-    });
 
     async function syncGame() {
         try {
             const res = await fetch(`${BOT_API_URL}/api/state`);
             const state = await res.json();
 
-            // 1. Синхронизируем список игроков (ТОЛЬКО если не смотрим результат)
-            if (!isShowingResult) {
-                players = state.players;
-            }
+            // 1. Синхронизируем список игроков
+            players = state.players;
 
-            // 2. Умная синхронизация таймера
-            // Если разрыв с сервером большой (>2 сек) или таймер не запущен - верим серверу
-            if (Math.abs(roundTime - state.round_time) > 2 || roundTime === 0) {
-                roundTime = state.round_time;
-            }
+            // 2. Синхронизируем таймер
+            roundTime = state.round_time;
 
             // 3. Синхронизируем статус раунда
             if (state.status === 'spinning' && !isSpinning) {
@@ -158,8 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     startSpinProcess(state.last_winner, elapsed);
                 }
+            } else if (state.status === 'waiting' && isSpinning) {
+                // Раунд закончился на сервере, сбрасываем локально
+                resetGame();
             }
-            // УБРАЛИ ПРЕЖДЕВРЕМЕННЫЙ resetGame() отсюда, так как он мешал анимации
 
             // Обновляем UI только если не крутим прямо сейчас
             if (!isSpinning) {
@@ -174,12 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncBalance();
             }
 
-            // Блокируем кнопку ставки во время спина и показа результата
-            if (state.status === 'spinning' || isSpinning || isShowingResult) {
+            // Блокируем кнопку ставки во время спина
+            if (state.status === 'spinning' || isSpinning) {
                 betBtn.disabled = true;
                 betBtn.style.opacity = "0.5";
                 betBtn.textContent = "ROLLING...";
-            } else if (betBtn.textContent !== "ОЖИДАНИЕ...") {
+            } else {
                 betBtn.disabled = false;
                 betBtn.style.opacity = "1";
                 betBtn.textContent = "В ИГРУ";
@@ -221,11 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawWheel(total) {
-        const size = canvas.width / (window.devicePixelRatio || 1);
-        const center = size / 2;
-        const radius = center - 2;
-
-        ctx.clearRect(0, 0, size, size);
+        ctx.clearRect(0, 0, 300, 300);
         let start = 0;
 
         // 1. Сначала рисуем ГЛОУ (свечение) для каждого сегмента отдельно
@@ -233,49 +226,54 @@ document.addEventListener('DOMContentLoaded', () => {
             const slice = (p.bet / total) * 2 * Math.PI;
             ctx.save();
             ctx.beginPath();
-            ctx.arc(center, center, radius - 8, start, start + slice);
+            ctx.arc(150, 150, 142, start, start + slice);
 
+            // Внешний мощный ореол (ЯРКИЙ НЕОН)
             ctx.shadowBlur = 60;
             ctx.shadowColor = p.color;
             ctx.strokeStyle = p.color;
-            ctx.lineWidth = 10;
+            ctx.lineWidth = 10; // Еще толще для яркости
+            ctx.stroke();
+
+            // Внутренний горящий фокус
+            ctx.shadowBlur = 25;
             ctx.stroke();
 
             ctx.restore();
             start += slice;
         });
 
-        // 2. Затем рисуем сами сегменты поверх
+        // 2. Затем рисуем сами сегменты поверх, чтобы перекрыть внутренние тени
         start = 0;
         players.forEach(p => {
             const slice = (p.bet / total) * 2 * Math.PI;
 
             ctx.save();
             ctx.beginPath();
-            ctx.moveTo(center, center);
-            ctx.arc(center, center, radius, start, start + slice);
+            ctx.moveTo(150, 150);
+            ctx.arc(150, 150, 148, start, start + slice);
             ctx.closePath();
 
             ctx.fillStyle = p.color;
             ctx.fill();
 
-            // ТЁМНЫЕ РАЗДЕЛИТЕЛИ
+            // ТЁМНЫЕ РАЗДЕЛИТЕЛИ МЕЖДУ СЕГМЕНТАМИ
             ctx.strokeStyle = '#0a0a0f';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(center, center);
-            ctx.lineTo(center + radius * Math.cos(start), center + radius * Math.sin(start));
+            ctx.moveTo(150, 150);
+            ctx.lineTo(150 + 148 * Math.cos(start), 150 + 148 * Math.sin(start));
             ctx.stroke();
 
             ctx.restore();
             start += slice;
         });
 
-        // ОБЩИЙ БЛЕСК СВЕРХУ
+        // ОБЩИЙ БЛЕСК СВЕРХУ (Стекло)
         ctx.save();
         ctx.beginPath();
-        ctx.arc(center, center, radius, 0, Math.PI * 2);
-        const shine = ctx.createRadialGradient(center, center - radius / 3, radius / 20, center, center, radius * 1.5);
+        ctx.arc(150, 150, 148, 0, Math.PI * 2);
+        const shine = ctx.createRadialGradient(150, 50, 10, 150, 150, 250);
         shine.addColorStop(0, "rgba(255, 255, 255, 0.2)");
         shine.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = shine;
@@ -300,13 +298,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawEmptyWheel() {
-        const size = canvas.width / (window.devicePixelRatio || 1);
-        const center = size / 2;
-        const radius = center - 2;
-
-        ctx.clearRect(0, 0, size, size);
+        ctx.clearRect(0, 0, 300, 300);
         ctx.beginPath();
-        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.arc(150, 150, 148, 0, Math.PI * 2);
         ctx.fillStyle = '#13141a';
         ctx.fill();
 
@@ -358,42 +352,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     betBtn.addEventListener('click', async () => {
-        if (isSpinning || betBtn.disabled) return;
+        if (isSpinning || isProcessingBet) return;
 
         const val = parseFloat(betInput.value);
         if (val >= 0.1 && val <= myBalance) {
-            // БЛОКИРУЕМ КНОПКУ
+            isProcessingBet = true;
             betBtn.disabled = true;
-            betBtn.style.opacity = "0.5";
-            const originalText = betBtn.textContent;
-            betBtn.textContent = "ОЖИДАНИЕ...";
+            betBtn.textContent = "ЖДЕМ...";
+            betBtn.style.opacity = "0.7";
 
-            const myColor = getNextNeonColor();
+            // Сначала уведомляем бота о ставке, чтобы он вычел из БД
+            const myColor = getNextNeonColor(); // Берем свой неон
             const ok = await notifyBotOfBet(uParam, val, myUsername, myColor);
 
             if (!ok) {
                 window.Telegram.WebApp.showAlert("❌ Ошибка связи с ботом. Ставка не принята.");
+                isProcessingBet = false;
                 betBtn.disabled = false;
+                betBtn.textContent = "В ИГРУ";
                 betBtn.style.opacity = "1";
-                betBtn.textContent = originalText;
                 return;
             }
 
-            // УСПЕХ
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
             myBalance -= val;
             updateBalanceUI();
             betInput.value = '';
 
-            // Кнопка разблокируется сама в цикле syncGame когда придет статус от сервера
-            // Но на случай ошибки сети разблокируем через 3 сек
-            setTimeout(() => {
-                if (!isSpinning) {
-                    betBtn.disabled = false;
-                    betBtn.style.opacity = "1";
-                    betBtn.textContent = "В ИГРУ";
-                }
-            }, 3000);
+            // Разблокируем только после успешной обработки
+            isProcessingBet = false;
+            // Текст и статус кнопки восстановятся сами в syncGame() через секунду
         }
     });
 
@@ -439,7 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remainDuration < 0) remainDuration = 0;
 
         wheelWrapper.style.transition = "none";
+        // Если мы зашли посреди спина, нужно сразу повернуть на начальный угол по времени
         if (alreadyElapsedMs > 0) {
+            // Линейная аппроксимация для упрощения (в идеале нужно учитывать кубическую кривую)
             const progress = alreadyElapsedMs / 6000;
             const currentRot = targetRotation * progress;
             wheelWrapper.style.transform = `rotate(${currentRot - 90}deg)`;
@@ -447,11 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
             wheelWrapper.style.transform = "rotate(-90deg)";
         }
 
-        // ВАЖНО: Используем setTimeout вместо requestAnimationFrame для гарантированного срабатывания на ПК
-        setTimeout(() => {
-            wheelWrapper.style.transition = `transform ${remainDuration / 1000}s cubic-bezier(0.1, 0, 0.1, 1)`;
-            wheelWrapper.style.transform = `rotate(${targetRotation - 90}deg)`;
-        }, 50);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                wheelWrapper.style.transition = `transform ${remainDuration / 1000}s cubic-bezier(0.1, 0, 0.1, 1)`;
+                wheelWrapper.style.transform = `rotate(${targetRotation - 90}deg)`;
+            });
+        });
 
         setTimeout(async () => {
             showFinalResult(winner);
@@ -459,26 +449,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showFinalResult(winner) {
-        if (!winner || isShowingResult) return;
-        isShowingResult = true;
-
+        if (!winner) return;
         const total = players.reduce((s, p) => s + p.bet, 0);
         const netWin = (total - winner.bet) * 0.90;
         const payout = winner.bet + netWin;
 
         timerDisplay.textContent = "Winner!";
-        timerDisplay.style.fontSize = "clamp(14px, 5vw, 22px)";
-        timerDisplay.style.color = "#00FF00"; // Розовый/Зеленый или Красный? Пусть будет зеленый для триумфа
+        timerDisplay.style.fontSize = "20px";
+        timerDisplay.style.color = "#FF0000";
 
-        const nameSize = winner.name.length > 12 ? "clamp(10px, 3.5vw, 14px)" : "clamp(12px, 4vw, 18px)";
-        const winSize = "clamp(14px, 4.5vw, 20px)";
-
+        const fontSize = winner.name.length > 12 ? "12px" : "15px";
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `
-            <div style="font-size: ${nameSize}; color: #fff; font-weight: 700; line-height: 1.1; margin-bottom: 2px;">${winner.name}</div>
-            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">
-                <span style="color: #fbbf24; margin-right: 2px;">$</span>${payout.toFixed(2)}
-            </div>
+            <div style="font-size: ${fontSize}; color: #fff; font-weight: 700; line-height: 1.1;">${winner.name}</div>
+            <div style="font-size: 14px; color: #00FF00; font-weight: 800; margin-top: 2px;">+${payout.toFixed(2)} USDT</div>
         `;
 
         if (winner.name === myUsername) {
@@ -486,27 +470,23 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => syncBalance(), 1000);
         }
 
-        // РОВНО ЧЕРЕЗ 3 СЕКУНДЫ ОЧИЩАЕМ ВСЁ И ГОТОВИМ К НОВОМУ РАУНДУ
-        setTimeout(() => {
-            isShowingResult = false;
-            isSpinning = false;
-            resetGame();
-        }, 3000);
+        setTimeout(() => resetGame(), 3000);
     }
 
     function resetGame() {
-        if (isShowingResult) return; // Страховка
         players = [];
         colorIndex = Math.floor(Math.random() * 360); // РАНДОМНЫЙ ЦВЕТ ДЛЯ ВСЕХ В НОВОМ РАУНДЕ
         roundTime = 120; // ВОЗВРАЩАЕМ 2 МИНУТЫ
         isSpinning = false;
+        timerStarted = false;
+        timerDisplay.textContent = "--:--";
+        timerDisplay.style.color = "#FF0000";
         timerDisplay.style.fontSize = ""; // Возвращаем компактный размер из CSS
 
         // СБРОС ЦЕНТРАЛЬНОГО ТАБЛО
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `$ <span id="pot-amount">0.00</span>`;
         potDisplay = document.getElementById('pot-amount'); // Переподключаем элемент
-        potDisplay.textContent = "0.00";
 
         wheelWrapper.style.transition = "none";
         wheelWrapper.style.transform = "rotate(-90deg)";
@@ -535,16 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
     }
-
-    // Локальный отсчет таймера (каждую секунду), чтобы он не "замирал"
-    setInterval(() => {
-        if (!isSpinning && !isShowingResult && roundTime > 0) {
-            roundTime--;
-            const mins = Math.floor(roundTime / 60);
-            const secs = roundTime % 60;
-            timerDisplay.textContent = `${mins}:${secs < 10 ? '0' + secs : secs}`;
-        }
-    }, 1000);
 
     init();
 });
