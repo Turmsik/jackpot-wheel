@@ -134,19 +134,21 @@ body {
 }
 
 .timer {
-    font-size: 26px;
+    font-size: clamp(20px, 8vw, 32px);
     font-weight: 800;
     color: #FF0000;
-    text-shadow: 0 0 10px #FF0000, 0 0 20px rgba(255, 0, 0, 0.5);
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.7), 0 0 20px rgba(255, 0, 0, 0.3);
     white-space: nowrap;
+    line-height: 1;
 }
 
 .pot-total {
-    font-size: 26px;
+    font-size: clamp(18px, 6vw, 26px);
     color: #00FF00;
     font-weight: 800;
     margin-top: 5px;
-    text-shadow: 0 0 15px #00FF00, 0 0 5px #fff;
+    text-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    line-height: 1;
 }
 
 /* Betting Panel */

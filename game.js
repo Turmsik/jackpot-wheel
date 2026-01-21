@@ -464,14 +464,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const payout = winner.bet + netWin;
 
         timerDisplay.textContent = "Winner!";
-        timerDisplay.style.fontSize = "20px";
+        timerDisplay.style.fontSize = "clamp(14px, 5vw, 22px)";
         timerDisplay.style.color = "#FF0000";
 
-        const fontSize = winner.name.length > 12 ? "12px" : "15px";
+        const nameSize = winner.name.length > 12 ? "clamp(10px, 3.5vw, 14px)" : "clamp(12px, 4vw, 18px)";
+        const winSize = "clamp(14px, 4.5vw, 20px)";
+
         const potContainer = document.getElementById('pot-total-container');
         potContainer.innerHTML = `
-            <div style="font-size: ${fontSize}; color: #fff; font-weight: 700; line-height: 1.1;">${winner.name}</div>
-            <div style="font-size: 14px; color: #00FF00; font-weight: 800; margin-top: 2px;">+${payout.toFixed(2)} USDT</div>
+            <div style="font-size: ${nameSize}; color: #fff; font-weight: 700; line-height: 1.1; margin-bottom: 2px;">${winner.name}</div>
+            <div style="font-size: ${winSize}; color: #00FF00; font-weight: 800; line-height: 1;">+${payout.toFixed(2)}</div>
         `;
 
         if (winner.name === myUsername) {
