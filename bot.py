@@ -14,12 +14,17 @@ import hmac
 import hashlib
 import urllib.parse
 from operator import itemgetter
+from aiocryptopay import CryptoPay, Networks
 
 # ---------------------------------------------
 # НАСТРОЙКИ
 # ---------------------------------------------
 BOT_TOKEN = "7967641942:AAH9CafrXRufn_x25U5n9WeVrm6Ty4P6y94"
 WEBAPP_URL = "https://onejoi.github.io/jackpot-wheel/"
+
+# ТОКЕН КРИПТОБОТА (Для тестов используй токен из @CryptoTestPayBot)
+CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN", "ВАШ_ТОКЕН_ТУТ") 
+crypto = CryptoPay(token=CRYPTO_PAY_TOKEN, network=Networks.TEST_NET)
 
 # ---------------------------------------------
 # БАЗА ДАННЫХ (SQLite)
@@ -226,6 +231,45 @@ async def game_loop():
         else:
             await asyncio.sleep(1)
 
+async def check_payments():
+    """Фоновая задача для проверки оплаченных счетов"""
+    print("💎 CryptoPay Polling Started")
+    processed_invoices = set()
+    
+    while True:
+        try:
+            # Получаем последние 50 счетов
+            invoices = await crypto.get_invoices(status='paid', count=50)
+            if invoices:
+                for inv in invoices:
+                    if inv.invoice_id not in processed_invoices:
+                        # Проверяем, наш ли это юзер (мы не храним связку ID в этом примере, 
+                        # поэтому для теста просто логируем. 
+                        # В реале нужно при создании счета передавать payload=user_id)
+                        uid = inv.payload
+                        if uid:
+                            amount_cents = int(inv.amount * 100)
+                            update_user_balance(int(uid), amount_cents)
+                            
+                            try:
+                                await bot.send_message(
+                                    int(uid), 
+                                    f"✅ <b>ПОПОЛНЕНИЕ УСПЕШНО!</b>\n\n"
+                                    f"💰 Зачислено: <b>{inv.amount:.2f} USDT</b>\n"
+                                    f"🚀 Удачи в игре!"
+                                )
+                            except: pass
+                        
+                        processed_invoices.add(inv.invoice_id)
+        except Exception as e:
+            # Если токен неверный, будет спамить ошибку, поэтому засыпаем подольше
+            if "Unauthorized" in str(e):
+                await asyncio.sleep(60)
+            else:
+                print(f"⚠️ Payment Check Error: {e}")
+                
+        await asyncio.sleep(5)
+
 
 @dp.message(Command("start"))
 async def start(message: types.Message, user: types.User = None, is_new: bool = False):
@@ -299,17 +343,32 @@ async def deposit_menu(call: CallbackQuery):
 @dp.callback_query(F.data.startswith("buy_"))
 async def process_buy(call: CallbackQuery):
     amount = float(call.data.split("_")[1])
-    update_user_balance(call.from_user.id, amount, call.from_user.username)
-    await call.answer(f"✅ Баланс пополнен на {amount} USDT!", show_alert=True)
     
-    # Сначала удаляем сообщение с кнопками пополнения
     try:
-        await call.message.delete()
-    except:
-        pass
-
-    # Отправляем НОВОЕ чистое меню (т.к. старое удалено)
-    await start(call.message, user=call.from_user, is_new=True)
+        # Создаем настоящий счет в Crypto Pay
+        invoice = await crypto.create_invoice(
+            asset='USDT', 
+            amount=amount, 
+            payload=str(call.from_user.id) # Передаем ID пользователя
+        )
+        
+        text = (
+            f"💎 <b>СЧЕТ НА ОПЛАТУ СОЗДАН</b>\n\n"
+            f"💰 Сумма: <b>{amount} USDT</b>\n"
+            f"🔗 Ссылка: <a href='{invoice.bot_invoice_url}'>Оплатить в Crypto Bot</a>\n\n"
+            f"<i>После оплаты баланс пополнится автоматически в течение 10-30 секунд.</i>"
+        )
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💳 ОПЛАТИТЬ", url=invoice.bot_invoice_url)],
+            [InlineKeyboardButton(text="« НАЗАД", callback_data="deposit_menu")]
+        ])
+        
+        await call.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        await call.answer()
+    except Exception as e:
+        print(f"❌ CryptoPay Invoice Error: {e}")
+        await call.answer("Ошибка при создании счета. Проверь API Токен.", show_alert=True)
 
 @dp.callback_query(F.data == "back_to_start")
 async def back_to_start(call: CallbackQuery):
@@ -467,7 +526,8 @@ async def main():
     await asyncio.gather(
         dp.start_polling(bot),
         run_api(),
-        game_loop()
+        game_loop(),
+        check_payments()
     )
 
 if __name__ == "__main__":
