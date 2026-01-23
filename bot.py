@@ -21,6 +21,7 @@ from aiocryptopay import AioCryptoPay, Networks
 # ---------------------------------------------
 BOT_TOKEN = "7967641942:AAH9CafrXRufn_x25U5n9WeVrm6Ty4P6y94"
 WEBAPP_URL = "https://turmsik.github.io/jackpot-wheel/"
+VERSION = "4.6"
 
 # ТОКЕН КРИПТОБОТА (Для тестов используй токен из @CryptoTestPayBot)
 CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN", "ВАШ_ТОКЕН_ТУТ") 
@@ -373,7 +374,10 @@ async def process_buy(call: CallbackQuery):
         await call.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
         await call.answer()
     except Exception as e:
-        print(f"❌ CryptoPay Invoice Error: {e}")
+        print(f"❌ CryptoPay Invoice Error: {type(e).__name__}: {e}")
+        # Если ошибка Unauthorized, значит токен не подходит для сети (Testnet/Mainnet)
+        if "Unauthorized" in str(e):
+            print("⚠️ ОШИБКА: Токен не прошел проверку! Проверь, что в Railway вставлен токен от @CryptoTestPayBot (для TEST_NET).")
         await call.answer("Ошибка при создании счета. Проверь API Токен.", show_alert=True)
 
 @dp.callback_query(F.data == "back_to_start")
@@ -545,9 +549,24 @@ async def run_api():
     await site.start()
     print(f"✅ API Server started on port {port} (0.0.0.0)")
 
+async def setup_menu_button():
+    """Устанавливает кнопку Mini App рядом с полем ввода"""
+    try:
+        from aiogram.types import MenuButtonWebApp, WebAppInfo as AIOWebAppInfo
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="Играть 🎮",
+                web_app=AIOWebAppInfo(url=WEBAPP_URL)
+            )
+        )
+        print("✅ Menu Button updated successfully!")
+    except Exception as e:
+        print(f"⚠️ Failed to update menu button: {e}")
+
 async def main():
     init_db()
-    print("\n🚀 БОТ ЗАПУЩЕН С БАЗОЙ ДАННЫХ!")
+    print(f"\n🚀 БОТ ЗАПУЩЕН (v{VERSION}) С БАЗОЙ ДАННЫХ!")
+    await setup_menu_button()
     
     # Запускаем API, бота и игровой цикл параллельно
     await asyncio.gather(
