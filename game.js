@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let players = [];
 
     // ЦЕНТРАЛЬНЫЙ АДРЕС БОТА (Railway Production)
-    const BOT_API_URL = "https://jackpot-wheel-production.up.railway.app";
+    const BOT_API_URL = "https://jackpot-wheel.up.railway.app";
 
     const params = new URLSearchParams(window.location.search);
     const bParam = params.get('balance');
