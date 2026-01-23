@@ -23,9 +23,17 @@ BOT_TOKEN = "7967641942:AAH9CafrXRufn_x25U5n9WeVrm6Ty4P6y94"
 WEBAPP_URL = "https://turmsik.github.io/jackpot-wheel/"
 VERSION = "4.6"
 
-# ТОКЕН КРИПТОБОТА (Для тестов используй токен из @CryptoTestPayBot)
+# ТОКЕН КРИПТОБОТА
 CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN", "ВАШ_ТОКЕН_ТУТ") 
-crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN, network=Networks.TEST_NET)
+# Режим сети: по умолчанию TEST_NET, но если в конфиге прописано MAIN_NET - переключаемся
+CRYPTO_NETWORK = os.environ.get("CRYPTO_NETWORK", "TEST").upper()
+
+if CRYPTO_NETWORK == "MAIN":
+    crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN, network=Networks.MAIN_NET)
+    print("💎 CryptoPay initialized in MAIN_NET mode (REAL MONEY)")
+else:
+    crypto = AioCryptoPay(token=CRYPTO_PAY_TOKEN, network=Networks.TEST_NET)
+    print("🧪 CryptoPay initialized in TEST_NET mode (FAKE MONEY)")
 
 # ---------------------------------------------
 # БАЗА ДАННЫХ (SQLite)
