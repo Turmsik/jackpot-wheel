@@ -214,12 +214,9 @@ async def game_loop():
                                     conn = sqlite3.connect('database.db')
                                     cursor = conn.cursor()
                                     cursor.execute('UPDATE stats SET value = value + ? WHERE key = "admin_profit"', (fee_cents,))
-                                    menu_button=MenuButtonWebApp(
-                text="Jackpot Wheel 🏆",
-                web_app=WebAppInfo(url=WEBAPP_URL)
-            )
-        )
-        print(f"✅ Menu Button globally updated to: {WEBAPP_URL} (v{VERSION})")
+                                    conn.commit()
+                                    conn.close()
+                                    print(f"📈 Bot won. Admin profit increased by {fee_cents/100:.2f} USDT")
                                 
                                 asyncio.create_task(delayed_bot_profit(real_players_total_cents))
 
