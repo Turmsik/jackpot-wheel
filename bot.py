@@ -20,7 +20,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 # ---------------------------------------------
 # НАСТРОЙКИ
 # ---------------------------------------------
-BOT_TOKEN = "7967641942:AAH9CafrXRufn_x25U5n9WeVrm6Ty4P6y94"
+BOT_TOKEN = "8572030403:AAEh-8weNhpNNOBM9ncwyPtsrDty4mUb6KI"
 WEBAPP_URL = "https://turmsik.github.io/jackpot-wheel/index.html"
 VERSION = "4.9"
 
