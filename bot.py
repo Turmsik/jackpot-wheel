@@ -302,8 +302,10 @@ async def start(message: types.Message, user: types.User = None, is_new: bool = 
         f"💡 <i>Советуем прочитать информацию о проекте перед игрой! 👇</i>"
     )
     
-    # Передаем реальный баланс в URL для Mini App
-    app_url = f"{WEBAPP_URL}?balance={balance}&user_id={user_id}"
+    # Передаем реальный баланс и метку времени для обхода кэша
+    import time
+    cache_buster = int(time.time())
+    app_url = f"{WEBAPP_URL}?balance={balance}&user_id={user_id}&v={cache_buster}"
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎲 ИГРАТЬ (НАЧАТЬ)", web_app=WebAppInfo(url=app_url))],
